@@ -1,0 +1,86 @@
+html,
+body {
+    font-family:
+        system-ui,
+        -apple-system,
+        sans-serif;
+    color: #b0c4b0;
+}
+
+:root {
+    --wc-bg: #081508;
+    --wc-bg-light: #143214;
+
+    --wc-text: #d4e8d4;
+    --wc-text-dim: #8ea88e;
+
+    --wc-accent: #2d5a2d;
+    --wc-glow: #7fdf7f;
+
+    --wc-danger: #b24b4b;
+}
+
+h1,
+h2,
+h3 {
+    font-weight: normal;
+}
+
+a {
+    color: #b0c3b0;
+    border-radius: 4px;
+}
+
+a:hover {
+    color: rgba(207, 224, 207, 0.9);
+}
+
+/* input style */
+input[type="text"],
+input[type="search"],
+input[type="number"],
+textarea,
+select {
+    font-family:
+        system-ui,
+        -apple-system,
+        sans-serif;
+    color: var(--wc-text);
+    background: rgba(20, 50, 20, 0.5);
+    border: 1px solid var(--wc-accent);
+    border-radius: 8px;
+    padding: 10px 14px;
+    transition: all 0.2s ease;
+}
+
+select {
+    cursor: pointer;
+    appearance: none;
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+}
+
+input[type="text"],
+input[type="search"],
+input[type="number"],
+select:hover {
+    border-color: #6b8e6b;
+    background: rgba(26, 58, 26, 0.6);
+}
+
+input[type="text"]:focus-visible,
+input[type="search"]:focus-visible,
+input[type="number"]:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(127, 223, 127, 0.15);
+    border-color: var(--wc-glow);
+}
+
+select option {
+    background: #0a1f0a;
+    color: var(--wc-text);
+    padding: 10px;
+}
