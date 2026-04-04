@@ -15,8 +15,8 @@
         "default_popup": "popup/popup.html",
         "default_icon": {
             "16": "icons/icon-16.png",
-            "32": "icons/icon-48.png",
-            "48": "icons/icon-128.png"
+            "32": "icons/icon-32.png",
+            "48": "icons/icon-48.png"
         },
         "default_title": "WebCemetery - Bury a Tab"
     },
@@ -35,15 +35,15 @@
     "commands": {
         "_execute_action": {
             "suggested_key": {
-                "default": "Ctrl+Shift+K",
+                "default": "Ctrl+Shift+D",
                 "mac": "Command+Shift+D"
             },
             "description": "Open WebCemetery popup"
         },
         "kill-current-tab": {
             "suggested_key": {
-                "default": "Ctrl+Shift+D",
-                "mac": "Command+Shift+D"
+                "default": "Ctrl+Shift+K",
+                "mac": "Command+Shift+K"
             },
             "description": "Kill current tab immediately"
         }
@@ -51,8 +51,8 @@
 
     "web_accessible_resources": [
         {
-            "resource": ["icons/*png", "dashboard/dashboard.html"],
-            "mathces": ["<all_urls>"]
+            "resources": ["icons/*png", "dashboard/dashboard.html"],
+            "matches": ["<all_urls>"]
         }
     ]
 }

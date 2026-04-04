@@ -1,0 +1,48 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>WebCemetery</title>
+        <link rel="stylesheet" href="popup.css" />
+        <link rel="stylesheet" href="../styles/shared.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Space+Grotesk:wght@300..700&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div class="popup-container">
+            <header class="popup-header">
+                <h1>WebCemetery</h1>
+            </header>
+
+            <section class="stats-section">
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-today">-</div>
+                    <div class="stat-label">Today</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-week">-</div>
+                    <div class="stat-label">This Week</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="stat-total">-</div>
+                    <div class="stat-label">Total</div>
+                </div>
+            </section>
+
+            <nav class="actions-section">
+                <button class="btn btn-primary" id="kill-tab-btn">Kill Current Tab</button>
+                <button class="btn btn-secondary" id="view-cemetery-btn">View Full Cemetery</button>
+            </nav>
+
+            <footer class="popup-footer">
+                <a href="#" class="settings-link">⚙️ Settings</a>
+            </footer>
+        </div>
+
+        <script src="popup.js"></script>
+    </body>
+</html>
