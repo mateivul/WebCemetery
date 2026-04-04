@@ -1,0 +1,86 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>WebCemetery</title>
+        <link rel="stylesheet" href="dashboard.css" />
+        <link rel="stylesheet" href="../styles/shared.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Space+Grotesk:wght@300..700&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div class="container">
+            <header class="header" role="banner">
+                <h1 class="title">WebCemetery</h1>
+                <p class="subtitle">Where tabs go to rest in peace</p>
+                <nav class="header-actions" aria-label="Main actions">
+                    <button id="export-btn" class="icon-btn" title="Export Cemetery" aria-label="Export cemetery data">
+                        <span class="btn-text">Export</span>
+                    </button>
+                    <button class="icon btn" id="import-btn" title="Import Cemetery" aria-label="Import cemetery data">
+                        <span class="btn-text">Import</span>
+                    </button>
+                    <input
+                        type="file"
+                        id="import-file"
+                        accept=".json"
+                        style="display: none"
+                        aria-label="Select import file"
+                    />
+                    <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Open settings">⚙️</button>
+                </nav>
+            </header>
+
+            <section class="start-panel" aria-label="Cemetery statistics">
+                <div class="stat-box">
+                    <div class="stat-number" id="stat-today" aria-live="polite">0</div>
+                    <div class="stat-label">Tabs Killed Today</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="stat-week" aria-live="polite">0</div>
+                    <div class="stat-label">Killed This Week</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="stat-total" aria-live="polite">0</div>
+                    <div class="stat-label">Total Killed</div>
+                </div>
+            </section>
+
+            <section class="controls" rolse="search">
+                <div class="search-bar">
+                    <input
+                        type="search"
+                        id="search-input"
+                        placeholder="Search tombstones..."
+                        autocomplete="off"
+                        aria-label="Search tombstonesby title, domain, or URL"
+                    />
+                    <div class="filters">
+                        <label for="filter-method" class="sr-only">Filter by kill method</label>
+                        <select id="filter-method" class="filter-select" aria-label="Filter tombstones by kill method">
+                            <option value="">All Kill Methods</option>
+                            <option value="manual">Manual</option>
+                            <option value="manual-close">Manual Close</option>
+                            <option value="auto-ghost">Ghost Detection</option>
+                            <option value="auto-duplicate">Duplicates</option>
+                            <option value="auto-resource">Resource Heavy</option>
+                        </select>
+                        <label for="sort-select" class="sr-only">Sort tombstones</label>
+                        <select id="sort-select" class="filter-select" aria-label="Sort tombstones">
+                            <option value="killedAt-desc">Recently Killed</option>
+                            <option value="killedAt-asc">Oldest First</option>
+                            <option value="timeAlive-desc">Longest Lived</option>
+                            <option value="timeAlive-asc">Shortest Lived</option>
+                            <option value="domain-asc">Domain (A-X)</option>
+                        </select>
+                    </div>
+                    <div id="results-count" role="status" aria-label="polite"></div>
+                </div>
+            </section>
+        </div>
+    </body>
+</html>
