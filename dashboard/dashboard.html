@@ -81,6 +81,150 @@
                     <div id="results-count" role="status" aria-label="polite"></div>
                 </div>
             </section>
+
+            <section
+                id="bulk-actions"
+                class="bulk-actions"
+                style="display: none"
+                role="toolbar"
+                aria-label="Bulk actions"
+            >
+                <div class="bulk-actions-left">
+                    <button
+                        id="toggle-selection"
+                        class="bulk-btn toggle-selection-btn"
+                        aria-pressed="false"
+                        aria-label="Toggle selection mode"
+                    >
+                        Select
+                    </button>
+                    <span id="selection-count" class="selection-count" aria-live="polite">0 selected</span>
+                </div>
+                <div class="bulk-actions-right">
+                    <button id="select-all" class="bulk-btn" aria-label="Select all tombstones">Select All</button>
+                    <button id="clear-selection" class="bulk-btn" aria-label="Clear Selection">Clear</button>
+                    <button
+                        id="bulk-resurrect"
+                        class="bulk-btn bulk-resurrect-btn"
+                        aria-label="Resurrect selected tombstones"
+                    >
+                        Resurrect Selected
+                    </button>
+                    <button id="bulk-delete" class="bulk-btn bulk-delete-btn" aria-label="Delete selected tombstones">
+                        Delete Selected
+                    </button>
+                </div>
+            </section>
+
+            <main role="main">
+                <section class="cemetery-section" aria-labelledby="cemetery-heading">
+                    <div class="section-header">
+                        <h2 class="cemetery-healing">Cemetery</h2>
+                        <div class="section-actions">
+                            <button id="show-achievements" class="btn-link" aria-label="View achievements">
+                                View Achievements
+                            </button>
+                            <button id="show-leaderboards" class="btn-link" aria-label="View leaderboards">
+                                View Leaderboards
+                            </button>
+                        </div>
+                    </div>
+                    <div
+                        class="cemetery-grid"
+                        id="cemetery-grid"
+                        role="list"
+                        aria-live="polite"
+                        aria-atomic="false"
+                    ></div>
+                    <div class="empty-state" id="empty-state" role="status" aria-live="polite">
+                        <p>No tabs have been killed yet</p>
+                        <p class="empty-subtitle">Your cemetery awaits its first resident...</p>
+                    </div>
+                </section>
+            </main>
+
+            <section class="chievements-section" style="display: none" aria-hidden="true">
+                <h2 class="section-title">Achievements</h2>
+                <div class="chievements-stats">
+                    <div class="achievement-stat">
+                        <span class="achievement-score" id="total-score-hidden">0</span>
+                        <span class="achievement-label">Total Score</span>
+                    </div>
+                    <div class="achievement-stat">
+                        <span class="achievement-score" id="unlocked-count-hidden">0</span>
+                        <span class="achievement-label">Unlocked</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="leaderboard-section" style="display: none">
+                <h2 class="section-title">Leaderboards</h2>
+            </section>
         </div>
+
+        <div
+            id="achievements-modal"
+            class="modal dashboard-modal"
+            style="display: none"
+            role="dialog"
+            aria-labelledby="achievements-title"
+            aria-modal="true"
+        >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="achievements-title">Achievements</h2>
+                    <button id="close-achievements" class="close-btn" aria-label="Close achievements">x</button>
+                </div>
+                <div id="achievements-grid" class="achievements-grid" role="list" aria-live="polite"></div>
+                <div class="achievement-stats" role="status">
+                    <div class="achievement-stat">
+                        <span class="achievement-score" id="total-score" aria-label="Total achievement score">0</span>
+                        <span class="achievement-label">Total Score</span>
+                    </div>
+                    <div class="achievement-stat">
+                        <span class="achievement-score" id="unlocked-count" aria-label="Number of achievements unlocked"
+                            >0</span
+                        >
+                        <span class="achievement-label">Unlocked</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div
+            id="leaderboards-modal"
+            class="modal dashboard-modal"
+            style="display: none"
+            role="dialog"
+            aria-labelledby="leaderboards-title"
+            aria-modal="true"
+        >
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="leaderboards-title">Leaderboards</h2>
+                    <button id="close-leaderboards" class="close-btn" aria-label="Close leaderboards">x</button>
+                </div>
+                <div class="leaderboard-grid">
+                    <div class="leaderboard-card">
+                        <h3 class="leaderboard-title">Most Killed Domains</h3>
+                        <div id="leaderboard-domains" class="leaderboard-list" role="list"></div>
+                    </div>
+
+                    <div class="leaderboard-card">
+                        <h3 class="leaderboard-title">Kills by Time of Day</h3>
+                        <div id="leaderboard-time" class="leaderboard-list" role="list"></div>
+                    </div>
+
+                    <div class="leaderboard-card">
+                        <h3 class="leaderboard-title">Kills by Day of Week</h3>
+                        <div id="leaderboard-day" class="leaderboard-list" role="list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="page-footer">
+            <p>Press <kbd>?</kbd> for keyboardshortcuts</p>
+        </footer>
     </body>
 </html>

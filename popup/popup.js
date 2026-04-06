@@ -88,7 +88,7 @@ function setupEventListeners() {
 
     document.getElementById("view-cemetery-btn").addEventListener("click", () => {
         const url = browserAPI.runtime.getURL("dashboard/dashboard.html");
-        browserAPI.tabs.create({ url: ulr });
+        browserAPI.tabs.create({ url: url });
         window.close();
     });
 
