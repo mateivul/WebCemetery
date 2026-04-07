@@ -599,3 +599,180 @@ function showConfirmDialog(message, options = {}) {
         setTimeout(() => confirmBtn.focus(), 100);
     });
 }
+
+let undoBuffer = [];
+const MAX_UNDO_ITEMS = 10;
+
+function addToUndoBuffer(type, data) {
+    undoBuffer.unshift({ type, data, timestamp: Date.now() });
+    if (undoBuffer.length > MAX_UNDO_ITEMS) undoBuffer.pop();
+}
+
+async function undoLastAction() {
+    if (undoBuffer.length === 0) {
+        showNotification("Nothing to undo", "info");
+        return;
+    }
+
+    const action = undoBuffer.shift();
+
+    try {
+        if (action.type === "bulk-delete" || action.type === "delete") {
+            const tombstones = Array.isArray(action.data) ? action.data : [action.data];
+            for (const tombstone of tombstones) await storage.saveTombstone(tombstone);
+
+            await loadTombstones();
+            await loadStats();
+            showNotification(`Restored ${tombstones.length} tombstone${tombstones.length > 1 ? "s" : ""}`, "success");
+        }
+    } catch (error) {
+        console.error("Error undoing action:", error);
+        showNotification("Failed to undo action", "error");
+    }
+}
+
+async function bulkDelete() {
+    if (selected.size === 0) {
+        showNotification("No tombstones selected", "warning");
+        return;
+    }
+
+    const count = selected.size;
+
+    const confirmed = await showConfirmDialog(
+        `Are you sure you want to permanently delete ${count} tombstone${count > 1 ? "s" : ""}`,
+        {
+            title: "Delete Tombstones",
+            confirmText: "Delete",
+            cancelText: "Cancel",
+            danger: true,
+        },
+    );
+
+    if (!confirmed) return;
+
+    try {
+        const deleteTombstones = allTombstones.filter((t) => selected.has(t.id));
+        addToUndoBuffer("bulk-delete", deletedTombstones);
+
+        for (const tombstoneId of selected) {
+            await storage.deleteTombstone(tombstoneId);
+        }
+
+        allTombstones = allTombstones.filter((t) => !selected.has(t.id));
+        filtered = filtered.filter((t) => !selected.has(t.id));
+
+        clearSelection();
+        renderTombstones(filtered, true);
+        updateStats();
+        showNotification(`Deleted ${count} tombstone${count > 1 ? "s" : ""}`, "success");
+    } catch (error) {
+        console.error("Error bulk deleting", error);
+        showNotification(`Failed to delete tombstones: ${error.message}`, "error");
+    }
+}
+
+async function loadAchievements() {
+    try {
+        const defaultsManager = new AchievementManager(storage);
+        const defaultAchievements = defaultsManager.defineAchievements();
+
+        const achievementsData = await storage.getSetting("achievements");
+        const savedAchievements = achievementsData || {};
+
+        const mergedAchievements = {};
+        for (const [id, defaultAchievement] of Object.entries(defaultAchievements)) {
+            mergedAchievements[id] = savedAchievements[id]
+                ? { ...defaultAchievement, ...savedAchievements[id] }
+                : defaultAchievement;
+        }
+        renderAchievements(mergedAchievements);
+    } catch (error) {
+        console.error("Error loading achievements".error);
+    }
+}
+
+function renderAchievements(achievements) {
+    const container = document.getElementById("achievements-grid");
+    const totalScoreEl = document.getElementById("total-score");
+    const unlockedCountEl = document.getElementById("unlocked-count");
+
+    if (!container) {
+        console.warn("achievements-grid container not fownd");
+        return;
+    }
+
+    container.innerHTML = "";
+    if (!achievements || Object.keys(achievements).length === 0) return;
+
+    let unlockedCount = 0;
+    let totalScore = 0;
+    const rarityScores = { common: 10, uncommon: 25, rare: 50, legendary: 100 };
+    for (const [id, achievement] of Object.entries(achievements)) {
+        const card = document.createElement("div");
+        card.className = `achievement-card ${achievement.unlocked ? "unlocked" : "locked"}`;
+        if (achievement.unlocked) {
+            unlockedCount++;
+            totalScore += rarityScores[achievement.rarity] || 10;
+        }
+
+        card.innerHTML = `
+            <div class="achievement-icon">${achievement.icon}</div>
+            <div class="achievement-name">${escapeHtml(achievement.name)}</div>
+            <div class="achievement-description">${escapeHtml(achievement.description)}</div>
+            <div class="achievement-rarity rarity-${achievement.rarity}">${achievement.rarity}</div>
+            ${achievement.unlocked ? `<div class="achievement-unlocked-date">Unlocked ${achievement.unlockedAt ? new Date(achievement.unlockedAt).toLocaleDateString() : "recently"} </div>` : ""}
+        `;
+
+        container.appendChild(card);
+    }
+
+    try {
+        if (totalScoreEl) totalScoreEl.textContent = totalScore;
+        if (unlockedCountEl) unlockedCountEl.textContent = `${unlockedCount}/${Object.keys(achievements).length}`;
+    } catch (error) {
+        console.error("Error updating achievement stats:", error);
+    }
+}
+
+async function loadLeaderboards() {
+    try {
+        const [domainLeaderboard, timeLeaderboard, dayLeaderboard] = await Promise.all([
+            statsCalc.getDomainLeaderboard(10),
+            statsCalc.getKillsByTimeOfDay(),
+            statsCalc.getKillsByDayOfWeek(),
+        ]);
+        renderLeaderboard("leaderboard-domains", domainLeaderboard, (item) => item.domain);
+        renderLeaderboard("leaderboard-time", timeLeaderboard.slice(0, 10), (item) => item.hour);
+        renderLeaderboard("leaderboard-day", dayLeaderboard.slice(0, 7), (item) => item.day);
+    } catch (error) {
+        console.error("Error loading leaderboards:", error);
+    }
+}
+
+function renderLeaderboard(elementId, items, nameGetter) {
+    const container = document.getElementById(elementId);
+    container.innerHTML = "";
+
+    if (items.length === 0) {
+        container.innerHTML = '<p style="text-align: center; opacity: 0.5;">No data yet</p>';
+        return;
+    }
+
+    items.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "leaderboard-item";
+
+        div.innerHTML = `
+            <span class="leaderboard-rank">#${index + 1}</span>
+            <span class="leaderboard-name">${escapeHtml(nameGetter(item))}</span>
+            <span class="leaderboard-value">${item.count}</span>
+        `;
+
+        container.appendChild(div);
+    });
+}
+
+function setupEventListeners() {
+    const searchInput = document.getElementById("search-inout");
+}
