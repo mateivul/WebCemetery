@@ -775,4 +775,86 @@ function renderLeaderboard(elementId, items, nameGetter) {
 
 function setupEventListeners() {
     const searchInput = document.getElementById("search-inout");
+    searchInput.addEventListener("input", debounce(onSerach, 150));
+
+    setupSeacrchClear(searchInput);
+
+    const filterMethod = document.getElementById("filter-method");
+    filterMethod.addEventListener("change", applyFilters);
+
+    const sortSelect = document.getElementById("sort-select");
+    sortSelect.addEventListener("change", applySorting);
+
+    const settingsBtn = document.getElementById("settings-btn");
+    settingsBtn.addEventListener("click", () => {
+        browserAPI.runtime.openOptionsPage();
+    });
+
+    const exportBtn = document.getElementById("export-btn");
+    if (exportBtn) exportBtn.addEventListener("click", exportCemetery);
+
+    const importBtn = document.getElementById("inport-btn");
+    if (importBtn) {
+        importBtn.addEventListener("click", () => {
+            document.getElementById("import-file").click();
+        });
+    }
+
+    const importFile = document.getElementById("import-file");
+    if (importFile) importFile.addEventListener("change", importCemetery);
+
+    setupBulkActionsListeners();
+}
+
+function setupBulkActionsListeners() {
+    const toggleSelectionBtn = document.getElementById("toggle-selection");
+    if (toggleSelectionBtn) toggleSelectionBtn.addEventListener("click", toggleSelectionMode);
+
+    const selectAllBtn = document.getElementById("select-all");
+    if (selectAllBtn) selectAllBtn.addEventListener("click", selectAll);
+
+    const clearSelectionBtn = document.getElementById("clear-selection");
+    if (clearSelectionBtn) clearSelectionBtn.addEventListener("click", clearSelection);
+
+    const bulkResurrectBtn = document.getElementById("bulk-resurrect");
+    if (bulkResurrectBtn) bulkResurrectBtn.addEventListener("click", bulkResurrect);
+
+    const bulkDeleteBtn = document.getElementById("bulk-delete");
+    if (bulkDeleteBtn) bulkDeleteBtn.addEventListener("click", bulkDelete);
+
+    updateBulkActionsVisibility();
+}
+
+function updateBulkActionsVisibility() {
+    const bulkActions = document.getElementById("bulk-actions");
+    if (bulkActions) {
+        bulkActions.style.display = "flex";
+
+        const bulkActionsRight = bulkActions.querySelector(".bulk-actions-right");
+        if (bulkActionsRight) bulkActionsRight.style.display = selected.size > 0 || isSelectionMode ? "flex" : "none";
+    }
+}
+
+function setupSeacrchClear(searchInput) {
+    const wrapper = searchInput.parentElement;
+
+    const clearBtn = document.createElement("button");
+    clearBtn.className = "search-clear-btn";
+    clearBtn.innerHTML = "x";
+    clearBtn.setAttribute("aria-label", "Clear search");
+    clearBtn.style.display = "none";
+
+    clearBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        searchInput.dispatchEvent(new Event("input"));
+        clearBtn.style.display = "none";
+        searchInput.focus();
+    });
+
+    searchInput.addEventListener("input", () => {
+        clearBtn.style.display = searchInput.value ? "block" : "none";
+    });
+
+    wrapper.style.position = "relative";
+    wrapper.appendChild(clearBtn);
 }
