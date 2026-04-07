@@ -433,3 +433,169 @@ function toggleTombstoneSelection(tombstoneId, element) {
     }
     updateBulkActionsUI();
 }
+
+function toggleSelectionMode() {
+    isSelectionMode = !isSelectionMode;
+    document.body.classList.toggle("selection-mode", isSelectionMode);
+
+    const toggleBtn = document.getElementById("toggle-selection");
+    if (toggleBtn) {
+        toggleBtn.textContent = isSelectionMode ? "Cancel Selection" : "Select";
+        toggleBtn.classList.toggle("active", isSelectionMode);
+    }
+
+    if (!isSelectionMode) {
+        clearSelection();
+    }
+    updateBulkActionsUI();
+}
+
+function clearSelection() {
+    selected.clear();
+    document.querySelectorAll(".tombstone.selected").forEach((el) => {
+        el.classList.remove("selected");
+        const checkbox = el.querySelector(".select-checkbox");
+        if (checkbox) checkbox.checked = false;
+    });
+    updateBulkActionsUI();
+}
+
+function selectAll() {
+    displayed.forEach((tombstone) => {
+        selected.add(tombstone.id);
+        const element = document.querySelector(`[data-id="${tombstone.id}]`);
+        if (element) {
+            element.classList.add("selected");
+            const checkbox = element.querySelector(".select-checkbox");
+            if (checkbox) checkbox.checked = true;
+        }
+    });
+    updateBulkActionsUI();
+}
+
+function updateBulkActionsUI() {
+    const selectionCount = document.getElementById("selection-count");
+    const bulkActionsRight = document.querySelector(".bulk-actions-right");
+
+    if (selectionCount) selectionCount.textContent = `${selected.size} selected`;
+
+    if (bulkActionsRight) bulkActionsRight.style.display = selected.size > 0 || isSelectionMode ? "flex" : "none";
+}
+
+async function bulkResurrect() {
+    if (selected.size === 0) {
+        showNotification("No tombstones selected", "warning");
+        return;
+    }
+
+    const count = selected.size;
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const tombstoneId of selected) {
+        const tombstone = allTombstones.find((t) => t.id === tombstoneId);
+        if (tombstone && tombstone.url && !isUnsafeUrl(tombstone.url)) {
+            try {
+                await browserAPI.tabs.create({ url: tombstone.url });
+                successCount++;
+                await new Promise((resolve) => setTimeout(resolve, 100));
+            } catch (e) {
+                failCount++;
+            }
+        } else {
+            failCount++;
+        }
+    }
+    if (successCount > 0) {
+        await incrementResurrectionCount(successCount);
+
+        try {
+            const achievementManager = new AchievementManager(window.cemeteryStorage);
+            const stats = await statsCalc.getKillCounts();
+            const newAchievements = await achievementManager.checkAchievements(stats);
+            if (newAchievements.length > 0) {
+                newAchievements.forEach((achievement) => {
+                    showNotification(`Achievement Unlocked: ${achievement.name}`, "success");
+                });
+                const achievementModal = document.getElementById("achievements-modal");
+                if (achievementModal.style.display === "flex") {
+                    await loadAchievements();
+                }
+            }
+        } catch (error) {
+            console.error("Error checking achievements after bulk resurrection:", error);
+        }
+    }
+
+    clearSelection();
+    showNotification(
+        `Resurrected ${successCount} tabs${failCount > 0 ? `, ${failCount} failed` : ""}`,
+        successCount > 0 ? "success" : "error",
+    );
+}
+
+function showConfirmDialog(message, options = {}) {
+    return new Promise((resolve) => {
+        const { title = "Confirm Action", confirmText = "Confirm", cancelText = "Cancel", danger = false } = options;
+
+        const dialogHTML = `
+            <div class="modal-overlay" id="confirm-dialog">
+                <div class="modal-content" style="max-width: 400px;">
+                    <div calss="modal-header">
+                        <h3>${escapeHtml(title)}</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p style="margin: 0; line-height: 1.6;">${escapeHtml(message)}</p>
+                    </div>
+                    <div class="modal-footer" style="display: flex; gap: var(--space-3); justify-content: flex-end; margin-top: var(--space-6);">
+                        <button class="btn btn-secondary" id="dialog-cancel">${escapeHtml(cancelText)}</button>
+                        <button class="btn ${danger ? "btn-danger" : "btn-primary"}" id="dialog-confirm">${escapeHtml(confirmText)}</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const existing = document.getElementById("confirm-dialog");
+        if (existing) existing.remove();
+
+        document.body.insertAdjacentHTML("beforeend", dialogHTML);
+        document.body.style.overflow = "hidden";
+
+        const dialog = document.getElementById("confirm-dialog");
+        const confirmBtn = document.getElementById("dialog-confirm");
+        const cancelBtn = document.getElementById("dialog-cancel");
+
+        const cleanup = () => {
+            dialog.remove();
+            document.body.style.overflow = "";
+        };
+
+        confirmBtn.addEventListener("click", () => {
+            cleanup();
+            resolve(true);
+        });
+
+        cancelBtn.addEventListener("click", () => {
+            cleanup();
+            resolve(false);
+        });
+
+        const escHandler = (e) => {
+            if (e.key === "Escape") {
+                cleanup();
+                document.removeEventListener("keydown", escHandler);
+                resolve(false);
+            }
+        };
+        document.addEventListener("keydown", escHandler);
+
+        dialog.addEventListener("click", (e) => {
+            if (e.target === dialog) {
+                cleanup();
+                resolve(false);
+            }
+        });
+
+        setTimeout(() => confirmBtn.focus(), 100);
+    });
+}
