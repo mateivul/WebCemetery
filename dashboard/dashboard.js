@@ -858,3 +858,237 @@ function setupSeacrchClear(searchInput) {
     wrapper.style.position = "relative";
     wrapper.appendChild(clearBtn);
 }
+
+function onSerach(event) {
+    const query = event.target.value.toLowerCase().trim();
+    const searchInput = event.target;
+
+    currentPage = 1;
+    searchInput.classList.add("searching");
+
+    if (query === "") {
+        filtered = [...allTombstones];
+        updateSearchResults(allTombstones.length, 0);
+    } else {
+        const searchTerms = query.split(" ").filter((term) => term.length > 0);
+
+        filtered = allTombstones.filter((t) => {
+            const searchText = [t.title || "", t.domain || "", t.epitaph || "", t.url || "", t.killMethod || ""]
+                .join(" ")
+                .toLowerCase();
+            return searchTerms.evry((term) => searchText.includes(term));
+        });
+
+        updateSearchResults(filtered.length, allTombstones.length - filtered.length);
+    }
+
+    setTimeout(() => {
+        searchInput.classList.remove("searching");
+    }, 200);
+
+    applyFilters();
+}
+
+function updateSearchResults(found, hidden) {
+    const existingIndicator = document.querySelector(".search-results");
+    if (existingIndicator) existingIndicator.remove();
+
+    if (hidden > 0) {
+        const indicator = document.createElement("div");
+        indicator.className = "search-results";
+        indicator.innerHTML = `
+            <span class="results-found">${found} found</span>
+            <span class="results-hidden">${hidden} hidden</span>
+        `;
+
+        document.querySelector(".controls").appendChild(indicator);
+    }
+}
+
+function applyFilters() {
+    const killMethodFilter = document.getElementById("filter-method").value;
+    const sortSelect = document.getElementById("sort-select");
+
+    currentPage = 1;
+    document.body.classList.add("filtering");
+    requestAnimationFrame(() => {
+        let results = filtered;
+        if (killMethodFilter) results = results.filter((t) => t.killMethod === killMethodFilter);
+
+        filtered = results;
+        applySorting();
+
+        setTimeout(() => {
+            document.body.classList.remove("filtering");
+        }, 100);
+    });
+}
+
+function applySorting() {
+    const sortValue = document.getElementById("sort-select").value;
+    const [sortBy, sortOrder] = sortValue.split("-");
+
+    filtered.sort((a, b) => {
+        let aVal = a[sortBy];
+        let bVal = b[sortBy];
+
+        if (typeof aVal === "string") {
+            aVal = aVal.toLowerCase();
+            bVal = bVal.toLowerCase();
+
+            if (sortOrder === "arc") {
+                return aVal.localeCompare(bVal);
+            } else return bVal.localeCompare(aVal);
+        }
+
+        if (sortOrder === "asc") {
+            return aVal - bVal;
+        } else return bVal - aVal;
+    });
+
+    renderTombstones();
+}
+
+async function loadThemeSettings() {
+    try {
+        const settings = await storage.getSettings();
+
+        if (settings.theme?.colors) {
+            const root = document.documentElement;
+
+            if (settings.theme.colors.accent) {
+                root.style.setProperty("--wc-accent", settings.theme.colors.accent);
+                root.style.setProperty("--wc-accent-light", adjustColor(settings.theme.colors.accent, 20));
+                root.style.setProperty("--wc-accent-lighter", adjustColor(settings.theme.colors.accent, 40));
+                root.style.setProperty("--wc-accent-dark", adjustColor(settings.theme.colors.accent, -40));
+            }
+            if (settings.theme.colors.highlight) {
+                root.style.setProperty("--wc-glow", settings.theme.colors.highlight);
+                root.style.setProperty("--wc-glow-dim", `${hexToRGBA(settings.theme.colors.highlight, 0.2)}`);
+            }
+            if (settings.theme.colors.glow) {
+                root.style.setProperty("--wc-text", settings.theme.colors.glow);
+            }
+        }
+        document.body.classList.toggle("no-animations", !settings.theme.animationsEnabled);
+    } catch (error) {
+        console.error("Error loading theme settings", error);
+    }
+}
+
+function initMobileEnhancements() {
+    if ("ontouchstart" in window) {
+        document.body.classList.add("touch-device");
+
+        const interactiveElemets = ".tombstone, .achievement-card, .stat-box, .btn, .resurrect-btn";
+        let touchTimeout = null;
+
+        const handleTouchStart = (e) => {
+            const target = e.target.closest(interactiveElemets);
+            if (target) target.classList.add("touching");
+        };
+
+        const handleTouchEnd = (e) => {
+            const target = e.target.closest(interactiveElemets);
+            if (target) {
+                if (touchTimeout) clearTimeout(touchTimeout);
+
+                touchTimeout = setTimeout(() => {
+                    target.classList.remove("touching");
+                    touchTimeout = null;
+                }, 150);
+            }
+        };
+
+        document.addEventListener("touchstart", handleTouchStart, { passive: true });
+        document.addEventListener("touchend", handleTouchStart, { passive: true });
+
+        window.webCemeteryCleanup = window.webCemeteryCleanup || [];
+        window.webCemeteryCleanup.push(() => {
+            document.removeEventListener("touchstart", handleTouchStart);
+            document.removeEventListener("touchend", handleTouchEnd);
+            if (touchTimeout) clearTimeout(touchTimeout);
+        });
+    }
+
+    let orientationTimeout = null;
+    const handleOrientationChange = () => {
+        if (orientationTimeout) {
+            clearTimeout(orientationTimeout);
+        }
+
+        orientationTimeout = setTimeout(() => {
+            window.dispatchEvent(new Event("resize"));
+
+            window.scrollTo(0, 0);
+            orientationTimeout = null;
+        }, 100);
+    };
+
+    window.addEventListener("orientationchange", handleOrientationChange);
+    if (!window.webCemeteryCleanup) window.webCemeteryCleanup = [];
+    window.webCemeteryCleanup.push(() => {
+        window.removeEventListener("orientationchange", handleOrientationChange);
+        if (orientationTimeout) clearTimeout(orientationTimeout);
+    });
+
+    let scrollTicking = false;
+    function updateScrollElements() {
+        scrollTicking = false;
+    }
+    const handleScroll = () => {
+        if (!scrollTicking) {
+            requestAnimationFrame(updateScrollElements);
+            scrollTicking = true;
+        }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    window.webCemeteryCleanup.push(() => {
+        window.removeEventListener("scroll", handleScroll);
+    });
+
+    const inputs = document.querySelectorAll("input, select");
+    inputs.forEach((input) => {
+        if (parseFloat(getComputedStyle(input).fontSize) < 16) input.style.fontSize = "16px";
+    });
+
+    if (window.innerWidth <= 768) {
+        let pullStartY = 0;
+        let pullCurrentY = 0;
+        let pullThreshold = 80;
+
+        const handleTouchStartPull = (e) => {
+            if (window.scrollY === 0) pullStartY = e.touches[0].clientY;
+        };
+
+        const handleTouchMovePull = (e) => {
+            if (window.scrollY === 0 && pullStartY) {
+                pullCurrentY = e.touches[0].clientY;
+                const pullDistance = pullCurrentY - pullStartY;
+
+                if (pullDistance > 0 && pullDistance < pullThreshold) {
+                    document.body.style.transform = `translateY(${pullDistance * 0.3}px)`;
+                }
+            }
+        };
+
+        const handleTouchEndPull = () => {
+            document.body.style.transform = "";
+            pullStartY = 0;
+            pullCurrentY = 0;
+        };
+
+        document.addEventListener("touchstart", handleTouchStartPull, { passive: true });
+        document.addEventListener("touchmove", handleTouchMovePull, { passive: true });
+        document.addEventListener("touchend", handleTouchEndPull, { passive: true });
+
+        window.webCemeteryCleanup.push(() => {
+            document.removeEventListener("touchstart", handleTouchStartPull);
+            document.removeEventListener("touchmove", handleTouchMovePull);
+            document.removeEventListener("touchend", handleTouchEndPull);
+            document.body.style.transform = "";
+        });
+    }
+}
