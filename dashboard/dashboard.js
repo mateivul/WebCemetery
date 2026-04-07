@@ -146,3 +146,290 @@ function renderTombstones(append = false) {
     renderLoadMoreButton(grid.parentElement);
     updateResultsCount();
 }
+
+function renderLoadMoreButton(container) {
+    const existing = container.querySelector(".load-more-container");
+    if (existing) existing.remove();
+    if (!hasMoreItems) return;
+
+    const loadMoreContainer = document.createElement("div");
+    loadMoreContainer.className = "load-more-container";
+    loadMoreContainer.innerHTML = `<button class="btn btn-secondary load-more-btn" aria-label="Load more tombstones">Load More (${filtered.length - currentPage * 50} remaining)</button>`;
+
+    const loadMoreBtn = loadMoreContainer.querySelector(".load-more-btn");
+    loadMoreBtn.addEventListener("click", loadMoreTombstones);
+    container.appendChild(loadMoreContainer);
+}
+
+function loadMoreTombstones() {
+    currentPage++;
+    renderTombstones(true);
+}
+
+function cleanupTombstoneEventListeners() {
+    cleanups.forEach((cleanup, element) => {
+        if (typeof cleanup === "function") cleanup();
+    });
+    cleanups.clear();
+}
+
+function renderTombstonesInChunks(tombstones, container) {
+    const CHUNK_SIZE = 20;
+    let currentIndex = 0;
+
+    function renderChunk() {
+        const fragment = document.createDocumentFragment();
+        const endIndex = Math.min(currentIndex + CHUNK_SIZE, tombstones.length);
+
+        for (let i = currentIndex; i < endIndex; i++) {
+            const element = createTombstoneElement(tombstones[i]);
+            element.style.animationDelay = `${i * 0.05}s`;
+            fragment.appendChild(element);
+        }
+
+        container.appendChild(fragment);
+        currentIndex = endIndex;
+
+        if (currentIndex < tombstones.length) {
+            if ("requestIdleCallback" in window) {
+                requestIdleCallback(renderChunk, { timeout: 50 });
+            } else setTimeout(renderChunk, 0);
+        }
+    }
+
+    renderChunk();
+}
+
+function createTombstoneElement(tombstone) {
+    const div = document.createElement("article");
+    div.className = "tombstone";
+    div.dataset.id = tombstone.id;
+    div.setAttribute("role", "article");
+    div.setAttribute("aria-label", `Tombstone for ${tombstone.title || "Unknown page"}`);
+
+    if (selected.has(tombstone.id)) div.classList.add("selected");
+
+    const timeAlive = formatTime(tombstone.timeAlive);
+    const killMethod = formatKillMethod(tombstone.killMethod);
+    const killedDate = new Date(tombstone.killedAt).toLocaleDateString();
+    const selectionCheckbox = `<label class="tombstone-select" aria-label="Select this tombstone for bulk actions">
+        <input type="checkbox" class="select-checkbox" ${selected.has(tombstone.id) ? "checked" : ""}>
+        <span class="checkmark"></span>
+    </label>`;
+
+    const tabGroupBadge = tombstone.tabGroup
+        ? `<span class="tab-group-badge" style="--group-color: ${getTabGroupColor(tombstone.tabGroup.color)}" title="Tab Group: ${escapeHtml(tombstone.tabGroup.title)}">${escapeHtml(tombstone.tabGroup.title)}</span>`
+        : "";
+
+    div.innerHTML = `
+        ${selectionCheckbox}
+        <div class="tombstone-header">
+            <div class="tombstone-favicon" aria-hidden="true">
+            ${tombstone.favicon ? `<img src="${escapeHtml(tombstone.favicon)}" alt="" class="favicon-img">` : ""}
+            </div>
+            <h3 class="tombstone-title" title="${escapeHtml(tombstone.title || "Untitled")}">
+                ${escapeHtml(tombstone.title || "Untitled")}
+            </h3>
+            <div class="tombstone-domain" title="${escapeHtml(tombstone.domain || "Unknown")}">
+                ${escapeHtml(tombstone.domain || "Unknown")}
+            </div>
+            ${tabGroupBadge}
+        </div>
+
+        <div class="tombstone-body">
+            <backquote class="tombstone-epitaph">
+            "${escapeHtml(tombstone.epitaph || "Rest in peace")}"
+            </blockquote>
+        </div>
+
+        <div class="tombstone-footer">
+            <div class="tombstone-time" aria-label="Time alive: ${timeAlive}">
+                <span aria-hidden="true">⏱️</span> Lived ${timeAlive}
+            </div>
+            <div class="tombstone-method">
+                ${killMethod}
+            </div>
+        </div>
+
+        <div class="tombstone-actions">
+            <button class="resurrect-btn" data-url="Resurrect ${escapeHtml(tombstone.title || "this tab")}">
+                <span aria-hidden="true">🔁</span> Resurrect
+            </button>
+        </div>
+    `;
+
+    const checkbox = div.querySelector(".select-checkbox");
+    const checkboxHandler = (e) => {
+        e.stopPropagation();
+        toggleTombstoneSelection(tombstone.id, div);
+    };
+    checkbox.addEventListener("change", checkboxHandler);
+
+    const resurrectBtn = div.querySelector(".resurrect-btn");
+    const clickHandler = () => resurrectTab(tombstone);
+    resurrectBtn.addEventListener("click", clickHandler);
+
+    cleanups.set(div, () => {
+        resurrectBtn.removeEventListener("click", clickHandler);
+        checkbox.removeEventListener("change", checkboxHandler);
+    });
+
+    if (tombstone.favicon) {
+        const faviconImg = div.querySelector(".favicon-img");
+        if (faviconImg) {
+            faviconImg.addEventListener("error", function () {
+                this.style.display = "none";
+            });
+        }
+    }
+
+    return div;
+}
+
+function isUnsafeUrl(url) {
+    if (!url) return true;
+
+    const unsafeProtocols = ["javascript:", "data:", "vbscript:", "file:"];
+
+    const lowerUrl = url.toLowerCase().trim();
+    return unsafeProtocols.some((protocol) => lowerUrl.startsWith(protocol));
+}
+
+async function incrementResurrectionCount(delta = 1) {
+    try {
+        const existing = await storage.getSetting("resurrections");
+        const current = existing && typeof existing.count === "number" ? existing.count : 0;
+        await sotrag.saveSettings("resurrections", { count: Math.max(0, current + delta) });
+    } catch (e) {
+        console.warn("Failed to update resurrection count:", e);
+    }
+}
+
+async function resurrectTab(tombstone, skipUndo = false) {
+    const resurrectBtn = document.querySelector(`[data-url="${escapeHtml(tombstone.url)}"]`);
+
+    try {
+        if (resurrectBtn) {
+            resurrectBtn.disabled = true;
+            resurrectBtn.textContent = "Resurrecting...";
+        }
+
+        if (!tombstone.url || tombstone.url === "Unknown URL" || tombstone.url === "about:blank") {
+            throw new Error(`Cannot resurrect "${tombstone.title}" - URL not availabe`);
+        }
+
+        if (isUnsafeUrl(tombstone.url)) throw new Error("Cannot resurrect - URL uses an unsafe protocol");
+
+        try {
+            new URL(tombstone.url);
+        } catch (urlError) {
+            throw new Error(`Invalid URL: ${tombstone.url}`);
+        }
+
+        const tabPromise = browserAPI.tabs.create({ url: tombstone.url });
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Tab creation timeout")), 5000),
+        );
+
+        const createdTab = await Promise.race([tabPromise, timeoutPromise]);
+
+        await incrementResurrectionCount(1);
+
+        try {
+            const achievementManager = new AchievementManager(window.cemeteryStorage);
+            const stats = await statsCalc.getKillCounts();
+            const newAchievements = await achievementManager.checkAchievements(stats);
+            if (newAchievements.length > 0) {
+                newAchievements.forEach((achievement) => {
+                    showNotification(`Achievement Unlocked: ${achievement.name}`, "success");
+                });
+                const achievementModal = document.getElementById("achievements-modal");
+                if (achievementModal.style.display === "flex") {
+                    await loadAchievements();
+                }
+            }
+        } catch (error) {
+            console.error("Error checking achievements after resurrection:", error);
+        }
+
+        if (!skipUndo) {
+            setUndoState(tombstone, createdTab && typeof createdTab.id === "number" ? createdTab.id : null);
+        }
+
+        showNotification(`Successfully resurrected: ${tombstone.title}`, "success", !skipUndo);
+    } catch (error) {
+        console.error("Error resurrecting tab:", error);
+        showNotification(`Failed to resurrect tab: ${error.message}`, "error");
+    } finally {
+        if (resurrectBtn) {
+            resurrectBtn.disabled = false;
+            resurrectBtn.textContent = "Resurrect";
+        }
+    }
+}
+
+function setUndoState(tombstone, resurrectedTabId = null) {
+    if (undoTimeout) clearTimeout(undoTimeout);
+
+    lastTab = { ...tombstone, resurrectedTabId };
+    undoTimeout = setTimeout(() => {
+        lastTab = null;
+        hideUndoNotification();
+    }, 30000);
+}
+
+async function undoResurrection() {
+    if (!lastTab) {
+        showNotification("Nothing to undo", "warning");
+        return;
+    }
+
+    try {
+        let closed = false;
+
+        if (typeof lastTab.resurrectedTabId === "number") {
+            try {
+                await browserAPI.tabs.remove(lastTab.resurrectedTabId);
+                closed = true;
+            } catch (e) {}
+        }
+
+        if (!closed) {
+            const tabs = await browserAPI.tabs.query({ url: lastTab.url });
+            if (tabs.length > 0) {
+                const tabToClose = tabs[tabs.length - 1];
+                await browserAPI.tabs.remove(tabToClose.id);
+            }
+        }
+
+        showNotification(`Undo successful - ${lastTab.title} sent back to the cemetery`, "success", false);
+
+        lastTab = null;
+        if (undoTimeout) {
+            clearTimeout(undoTimeout);
+            undoTimeout = null;
+        }
+        hideUndoNotification();
+    } catch (error) {
+        console.error("Error undoing resurrection:", error);
+        showNotification(`Failed to undo: ${error.message}`, error);
+    }
+}
+
+function hideUndoNotification() {
+    const undoNotification = document.querySelector(".undo-notification");
+    if (undoNotification) {
+        undoNotification.remove();
+    }
+}
+
+function toggleTombstoneSelection(tombstoneId, element) {
+    if (selected.has(tombstoneId)) {
+        selected.delete(tombstoneId);
+        element.classList.remove("selected");
+    } else {
+        selected.add(tombstoneId);
+        element.classList.add("selected");
+    }
+    updateBulkActionsUI();
+}
