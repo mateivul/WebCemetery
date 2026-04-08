@@ -334,3 +334,295 @@ browserAPI.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
         manuallyKilledTabs.delete(tabId);
     }
 });
+
+async function getTabGroupInfo(tab) {
+    try {
+        if (!browserAPI.tabGroups || !tab.groupId || tab.groupId === -1) return null;
+
+        const group = await browserAPI.tabGroups.get(tab.groupId);
+        return {
+            id: group.id,
+            title: group.title || "Unnamed Group",
+            color: group.color || "grey",
+        };
+    } catch (error) {
+        return null;
+    }
+}
+
+async function killTab(tab, killMethod = "manual", customEpitaph = null) {
+    if (!tab || typeof tab.id !== "number") throw new Error("Invalide tab: missing tab id");
+
+    const now = Date.now();
+    const lastKilledAt = recentlyKilledTabs.get(tab.id);
+    if (lastKilledAt && now - lastKilledAt < 3000) {
+        console.warn(`WebCemetery: ignoring duplicate kill request for tab ${tab.id}`);
+        return null;
+    }
+
+    if (inFlightKillTabs.has(tab.id)) {
+        console.warn(`WebCemetery: kill already in porgerss for tab ${tab.id}`);
+        return null;
+    }
+
+    inFlightKillTabs.add(tab.id);
+
+    const tabUrl = tab.url || "";
+    if (
+        !tabUrl ||
+        tabUrl.startsWith("chrome://") ||
+        tabUrl.startsWith("chrome-extension://") ||
+        tabUrl === "about:blank"
+    ) {
+        inFlightKillTabs.delete(tab.id);
+        console.warn("WebCemetery: Skipping unsupported tab URL for kill operation:", tabUrl || "(empry)");
+        return null;
+    }
+
+    manuallyKilledTabs.add(tab.id);
+    setTimeout(() => manuallyKilledTabs.delete(tab.id), 10000);
+
+    try {
+        const createdAt = tabCreationTimes.get(tab.id) || Date.now();
+        const killedAt = Date.now();
+        const timeAlive = Math.floor((killedAt - createdAt) / 1000);
+        const domain = extractDomain(tabUrl);
+
+        if (isUnsafeUrl(tabUrl)) throw new Error("Cannot kill tab with unsafe URL protocol");
+
+        const tabGroup = await getTabGroupInfo(tab);
+        const epitaph = customEpitaph || (await generateEpitaph(tab, timeAlive, domain, killMethod));
+        const favicon = tab.favIconUrl || "";
+
+        const tombstone = {
+            if: generateUUID(),
+            url: tabUrl,
+            title: tab.title || "Untitled",
+            favicon: favicon,
+            killedAt: killedAt,
+            createdAt: createdAt,
+            timeAlive: timeAlive,
+            epitaph: epitaph,
+            domain: domain,
+            killMethod: killMethod,
+            customEpitaph: customEpitaph !== null,
+            tabGroup: tabGroup,
+        };
+
+        await saveTombstone(tombstone);
+        recentlyKilledTabs.set(tab.id, Date.now());
+        setTimeout(() => recentlyKilledTabs.delete(tab.id), 5000);
+
+        if (achievementManager) {
+            const stats = await calculateStats();
+            const newAchievement = await achievementManager.checkAchievements(stats, tombstone);
+
+            for (const achievement of newAchievements) {
+                try {
+                    await showAchievementsNotification(achievement);
+                } catch (notificationError) {
+                    console.warn("WebCemetery: achievement notification failed:", notificationError);
+                    console.log("tab killed:", tab.id);
+                }
+            }
+        }
+
+        if (typeof tab.id === "number") {
+            try {
+                await browserAPI.tabs.remove(tab.id);
+            } catch (removeError) {
+                const message = removeError?.message || "";
+                if (!message.includes("No tab with id")) throw removeError;
+                console.warn(`WebCemetery: tab ${tab.id} already closed before remove call`);
+            }
+        }
+
+        console.log("Tab killed:", tombstone);
+        return tombstone;
+    } catch (error) {
+        console.error("Error killing tab:", { error, tabId: tab?.id, tabUrl: tab?.url, killMethod });
+        throw error;
+    } finally {
+        inFlightKillTabs.delete(tab.id);
+    }
+}
+
+async function showAchievementsNotification(achievement) {
+    const rarityEmojis = {
+        common: "⭐",
+        uncommon: "🌟",
+        rare: "✨",
+        legendary: "💫",
+    };
+
+    const rarityColors = {
+        common: "#8b8b8b",
+        uncommon: "#1eff00",
+        rare: "#0070ff",
+        legendary: "#ff8000",
+    };
+
+    const iconUrl = browserAPI.runtime.getUrl("icon/icon128.png");
+
+    await browserAPI.notifications.create(`achievement-${achievement.id}`, {
+        type: "basic",
+        iconUrl,
+        title: `${achievement.rarity.toUpperCase()} Achievement Unlocked!`,
+        message: `${rarityEmojis[achievement.rarity]} ${achievement.icon} ${achievement.name}\n${achievement.description}`,
+        priority: achievement.rarity === "legendary" ? 2 : 1,
+    });
+
+    if (achievement.rarity === "legendary") {
+        setTimeout(() => {
+            browserAPI.notifications.create(`legendary-${achievement.id}`, {
+                type: "basic",
+                iconUrl,
+                title: "LEGENDARY ACHIEVEMENT!!!",
+                message: "You are now a legend of tab destruction!",
+                priority: 2,
+            });
+        }, 1000);
+    }
+
+    const clearTime = achievement.rarity === "legendary" ? 8000 : 5000;
+    setTimeout(() => {
+        browserAPI.notifications.clear(`achievement-${achievement.id}`);
+        if (browserAPI.rarity === "legendary") {
+            browserAPI.notifications.clear(`legendary-${achievement.id}`);
+        }
+    }, clearTime);
+}
+
+async function getAllStatsFromDB() {
+    return new Promise((resolve, reject) => {
+        const tx = storage.transaction("stats", "readonly");
+        const store = tx.objectStore("stats");
+        const request = store.getAll();
+
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function getAllTombstonesFromDB() {
+    return new Promise((resolve, reject) => {
+        const tx = storage.transaction("tombstones", "readonly");
+        const store = tx.objectStore("tombstones");
+        const request = store.getAll();
+
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function getSettingFromDB(key) {
+    return new Promise((resolve, reject) => {
+        const tx = storage.transaction("settings", "readonly");
+        const store = tx.objectStore("settings");
+        const request = store.get(key);
+
+        request.onsuccess = () => resolve(request.result ? request.result.value : null);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function saveSettingToDB(key, value) {
+    return new Promise((resolve, reject) => {
+        const tx = storage.transaction("settings", "readwrite");
+        const store = tx.objectStore("settings");
+        const request = store.put({ key, value });
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+async function detectAndKillGhostTabs() {
+    try {
+        const settings = await getCachedSettings();
+
+        if (!settings.ghostDetection.enabled) return;
+
+        const allTabs = await browserAPI.tabs.query({});
+        const now = Date.now();
+        const CHUNK_SIZE = 100;
+        const tabChunks = [];
+        for (let i = 0; i < allTabs.length; i += CHUNK_SIZE) tabChunks.push(allTabs.slice(i, i + CHUNK_SIZE));
+
+        let urlIndex = null;
+        if (settings.ghostDetection.detectDuplicates) {
+            urlIndex = new Map();
+            for (const tab of allTabs) {
+                if (tab.url && !tab.pinned) {
+                    if (!urlIndex.has(tab.url)) urlIndex.set(tab.url, []);
+                    urlIndex.get(tab.url).push(tab);
+                }
+            }
+        }
+
+        for (const chunk of tabChunks) {
+            for (const tab of chunk) {
+                if (tab.pinned || tab.active) continue;
+
+                if (settings.ghostDetection.detectDuplicates && tab.url && urlIndex) {
+                    const sameUrlTabs = urlIndex.get(tab.url) || [];
+
+                    if (sameUrlTabs.length > 1) {
+                        const keeper = sameUrlTabs.reduce((best, t) => {
+                            const bestCreated = tabCreationTimes.get(best.id) ?? Number.POSITIVE_INFINITY;
+                            const tCreated = tabCreationTimes.get(t.id) ?? Number.POSITIVE_INFINITY;
+
+                            if (tCreated < bestCreated) return t;
+                            if (tCreated > bestCreated) return best;
+
+                            return (t.id ?? 0) < (best.id ?? 0) ? t : best;
+                        }, sameUrlTabs[0]);
+
+                        if (keeper && keeper.id !== tab.id) {
+                            await killTab(tab, "auto-duplicate");
+                            continue;
+                        }
+                    }
+                }
+
+                if (settings.ghostDetection.inactiveMinutes > 0) {
+                    const createdAt = tabCreationTimes.get(tab.id) || tab.lastAccessed || now;
+                    const inactiveMs = now - createdAt;
+                    const inactiveMinutes = inactiveMs / (1000 * 60);
+
+                    if (inactiveMinutes >= settings.ghostDetection.inactiveMinutes) {
+                        await killTab(tab, "auto-ghost");
+                        continue;
+                    }
+                }
+
+                if (settings.ghostDetection.detectResourceHeavy && browserAPI.processes) {
+                    try {
+                        const processes = await browserAPI.processes.getProcessInfo([], true);
+                        for (const processId in processes) {
+                            const process = processes[processId];
+                            if (process.tabs && process.tabs.includes(tab.id)) {
+                                const memoryMB = process.privateMemory / (1024 * 1024);
+
+                                if (memoryMB >= settings.ghostDetection.memoryThresholdMB) {
+                                    await killTab(tab, "auto-resource");
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.log("Process API not available:", e);
+                    }
+                }
+            }
+
+            chunk.length = 0;
+        }
+
+        if (urlIndex) {
+            urlIndex.clear();
+            urlIndex = null;
+        }
+    } catch (error) {
+        console.error("Error in ghost detection:", error);
+    }
+}
