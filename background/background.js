@@ -626,3 +626,275 @@ async function detectAndKillGhostTabs() {
         console.error("Error in ghost detection:", error);
     }
 }
+
+async function autoArchiveOldTombstones() {
+    try {
+        const settings = await getCachedSettings();
+        if (!settings.autoArchieve.enabled) return;
+
+        const daysMs = settings.autoArchieve.daysToKeep * 24 * 60 * 60 * 1000;
+        const beforeDate = Date.now() - daysMs;
+        const count = await deleteOldTombstones(beforeDate);
+        console.log(`Auto-archived ${count} old tombstones`);
+    } catch (error) {
+        console.error("Error in auto-archieve:", error);
+    }
+}
+
+async function initStorage() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open("tabCemetery", 1);
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            storage = request.result;
+            resolve(storage);
+        };
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+
+            if (!db.objectStoreNames.contains("tombstones")) {
+                const tombstoneStore = db.createObjectStore("tombstone", { keyPath: "id" });
+                tombstoneStore.createIndex("killedAt", "killedAt", { unique: false });
+                tombstoneStore.createIndex("domain", "domain", { unique: false });
+            }
+
+            if (!db.objectStoreNames.contains("settings")) {
+                db.createObjectStore("settings", { keyPath: "key" });
+            }
+
+            if (!db.objectStoreNames.contains("stats")) {
+                const statsStore = db.createObjectStore("stats", { keyPath: "date" });
+                statsStore.createIndex("date", "date", { unique: true });
+            }
+        };
+    });
+}
+
+async function saveTombstone(tombstone) {
+    return new Promise((resolve, reject) => {
+        const tx = storage.transaction(["tombstones", "stats"], "readwrite");
+        const tombstoneStore = tx.objectStore("tombstone");
+        const statsStore = tx.objectStore("stats");
+
+        const tombstoneRequest = tombstoneStore.add(tombstone);
+
+        tombstoneRequest.onsuccess = () => {
+            const date = new Date(tombstone.killedAt).toISOString().split("T")[0];
+            const statsRequest = statsStore.get(date);
+
+            statsRequest.onsuccess = () => {
+                const existing = statsRequest.result;
+                const count = existing ? existing.count + 1 : 1;
+                const updateRequest = statsRequest.put({ date, count });
+
+                updateRequest.onsuccess = () => resolve();
+                updateRequest.onerror = () => reject(updateRequest.error);
+            };
+
+            statsRequest.onerror = () => reject(statsRequest.error);
+        };
+
+        tombstoneRequest.onerror = () => reject(tombstoneRequest.error);
+    });
+}
+
+async function getCachedSettings() {
+    const now = Date.now();
+
+    if (settingsCache && now - settingsCacheTime < SETTINGS_CACHE_DURATION) return settingsCache;
+
+    try {
+        const settings = await getSettings();
+        settingsCache = settings;
+        settingsCacheTime = now;
+        return settings;
+    } catch (error) {
+        console.error("Error fetching settings:", error);
+        return settingsCache || getDefaultSettings();
+    }
+}
+
+function invalidateSettingsCache() {
+    settingsCache = null;
+    settingsCacheTime = 0;
+}
+function getDefaultSettings() {
+    return WC_SETTINGS.getDefaultSettings();
+}
+
+async function getSettings() {
+    if (!storage) await safeInitialize();
+
+    if (!storage) {
+        console.warn("Storage not available, using defaults");
+        return getDefaultSettings();
+    }
+
+    return new Promise((resolve, reject) => {
+        try {
+            const tx = storage.transaction("settings", "readonly");
+            const store = tx.objectStore("settings");
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                const all = request.result || [];
+                const setting = {};
+
+                all.forEach((item) => {
+                    setting[item.key] = item.value;
+                });
+
+                resolve(WC_SETTINGS.mergeWithDefaultSettings(settings));
+            };
+            request.onerror = () => reject(request.error);
+        } catch (error) {
+            console.error("error in getSettings transaction:", error);
+            reject(error);
+        }
+    });
+}
+
+async function deleteOldTombstones(befromDate) {
+    if (!storage) await safeInitialize();
+
+    if (!storage) {
+        console.error("Storage not available for deleteOldTombstomes");
+        return 0;
+    }
+
+    return new Promise((resolve, reject) => {
+        try {
+            const tx = storage.transaction("tombstones", "readwrite");
+            const store = tx.objectStore("tombstones");
+            const getAllRequest = store.getAll();
+
+            getAllRequest.onsuccess = () => {
+                const all = getAllRequest.result || [];
+                let count = 0;
+                let completed = 0;
+                const toDelete = all.filter((tombstone) => tombstone.killedAt < befromDate);
+
+                if (toDelete.length === 0) {
+                    resolve(0);
+                    return;
+                }
+
+                toDelete.forEach((tombstone) => {
+                    const deleteRequest = store.delete(tombstone.id);
+                    deleteRequest.onsuccess = () => {
+                        count++;
+                        completed++;
+                        if (completed === toDelete.length) resolve(count);
+                    };
+                    deleteRequest.onerror = () => reject(deleteRequest.error);
+                });
+            };
+
+            getAllRequest.onerror = () => reject(getAllRequest.error);
+        } catch (error) {
+            console.error("Error in delelteOldTombstones:", error);
+            reject(error);
+        }
+    });
+}
+
+async function calculateStats() {
+    return new Promise((resolve, reject) => {
+        const tx = storage.transaction(["tombstones", "stats"], "readonly");
+        const tombstoneStore = tx.objectStore("tombstones");
+        const statsStore = tx.objectStore("stats");
+
+        const now = new Date();
+        const today = now.toISOString().split("T")[0];
+        const todayRequest = statsStore.get(today);
+
+        todayRequest.onsuccess = () => {
+            const todayStat = todayRequest.result || { count: 0 };
+            const allStatsRequest = statsStore.getAll();
+
+            allStatsRequest.onsuccess = () => {
+                const weekStats = allStatsRequest.result || [];
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                const weekCount = weekStats
+                    .filter((s) => s.date >= weekAgo.toISOString().split("T")[0])
+                    .reduce((sum, s) => sum + s.count, 0);
+                const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                const monthCount = weekStats
+                    .filter((s) => s.date >= monthAgo.toISOString().split("T")[0])
+                    .reduce((sum, s) => sum + s.count, 0);
+                const countRequest = tombstoneStore.count();
+
+                countRequest.onsuccess = () => {
+                    resolve({
+                        today: todayStat.count,
+                        week: weekCount,
+                        month: monthCount,
+                        total: countRequest.result,
+                    });
+                };
+                countRequest.onerror = () => reject(countRequest.error);
+            };
+            allStatsRequest.onerror = () => reject(allStatsRequest.error);
+        };
+
+        todayRequest.onerror = () => reject(todayRequest.error);
+    });
+}
+
+function generateUUID() {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
+}
+
+function extractDomain(url) {
+    try {
+        const urlObj = new URL(url);
+        return urlObj.hostname;
+    } catch (e) {
+        return url;
+    }
+}
+
+async function generateManualCloseEpitaph(tabTitle, timeAlive, domain) {
+    const settings = await getSettings();
+    const customTemplates = settings.customEpitaphs?.enabled ? settings.customEpitaphs.templates : null;
+
+    return epitaphGenerator.generate(
+        { title: tabTitle },
+        { timeAlive, domain, killMethod: "manual-close", customTemplates },
+    );
+}
+
+async function generateEpitaph(tab, timeAlive, domain, killMethod = "manual") {
+    const settings = await getSettings();
+    const customTemplates = settings.customEpitaphs?.enabled ? settings.customEpitaphs.templates : null;
+
+    return epitaphGenerator.generate(tab, { timeAlive, domain, killMethod, customTemplates });
+}
+
+function formatTime(seconds) {
+    if (seconds < 60) return `${Math.floor(seconds)}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+    return `${Math.floor(seconds / 86400)}d`;
+}
+
+initStorage().catch(console.error);
+
+function getTabMemoryOld(tabId) {
+    return 0;
+}
+
+function debugTabState() {
+    console.log("aloo why not work", tabCreationTimes.size);
+    console.log("killed t:", manuallyKilledTabs.size);
+}
+
+function makeId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
