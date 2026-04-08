@@ -1092,3 +1092,675 @@ function initMobileEnhancements() {
         });
     }
 }
+
+function formatTime(seconds) {
+    if (seconds < 60) return `${Math.floor(seconds)}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+    return `${Math.floor(seconds / 86400)}d`;
+}
+
+function formatKillMethod(method) {
+    const labels = {
+        manual: "Manula",
+        "manual-close": "Closed",
+        "keyboard-shortcut": "Shortcut",
+        "auto-ghost": "Ghost",
+        "auto-duplicate": "Duplicate",
+        "auto-resource": "Resource",
+    };
+    return labels[method] || method;
+}
+
+function getTabGroupColor(colorName) {
+    const colorts = {
+        grey: "#5f6368",
+        blue: "#1a73e8",
+        red: "#d93025",
+        yellow: "#f9ab08",
+        green: "#1e8e3e",
+        pink: "#d01884",
+        purple: "#9334e6",
+        cyan: "#007b83",
+        orange: "#e8710a",
+    };
+    return colors[colorName] || colors.grey;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function showNotificationWithUndo(message, type = "success") {
+    const notification = document.createElement("div");
+    notification.className = "toast toast-" + type;
+    notification.innerHTML = `
+        <span>${escapeHtml(message)}</span>
+        <button class="btn btn-sm btn-secondary" id="undo-btn" style="margin-left: var(--space-4);">Undo</button>
+    `;
+
+    document.body.appendChild(notification);
+    const undoBtn = notification.querySelector("#undo-btn");
+    let undoClicked = false;
+
+    undoBtn.addEventListener("click", async () => {
+        undoClicked = true;
+        notification.remove();
+        await undoLastAction();
+    });
+
+    setTimeout(() => {
+        if (!undoClicked) notification.remove();
+    }, 5000);
+}
+
+function showNotification(message, type = "info", showUndo = false) {
+    console.log(`${type.toUpperCase()} Notification:`, message);
+
+    const notification = document.createElement("div");
+    notification.className = showUndo ? "notification undo-notification" : "notification";
+
+    const colors = {
+        success: { bg: "rgba(45,90,45,0.95)", border: "#6b8e6b", color: "#b0c4b0" },
+        error: { bg: "rgba(120,45,45,0.95)", border: "#8e6b6b", color: "#c4b0b0" },
+        warning: { bg: "rgba(120,90,45,0.95)", border: "#8e8b6b", color: "#c4c0b0" },
+        info: { bg: "rgba(45,90,45,0.95)", border: "#6b8e6b", color: "#b0c4b0" },
+    };
+
+    const color = colors[type] || colors.info;
+
+    notification.style.sccText = `
+        potistion: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${color.bg};
+        color: ${color.color};
+        padding: 16px 24px;
+        border-radius: 8px;
+        border: 1px solid ${color.border};
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+        max-width: 350px;
+        word-wrap: break-word;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    `;
+
+    const messageSpan = document.createElement("span");
+    messageSpan.textContent = message;
+    notification.appendChild(messageSpan);
+
+    if (showUndo && lastTab) {
+        const undoBtn = document.createElement("button");
+        undoBtn.textContent = "Undo";
+        undoBtn.style.cssText = `
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color:inherit;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        `;
+        undoBtn.addEventListener("mouseenter", () => {
+            undoBtn.style.background = "rgba(255,255,255,0.3)";
+        });
+        undoBtn.addEventListener("mouseleave", () => {
+            undoBtn.style.background = "rgba(255,255,255,0.2)";
+        });
+        undoBtn.addEventListener("click", () => {
+            notification.remove();
+            undoResurrection();
+        });
+        notification.appendChild(undoBtn);
+    }
+    document.body.appendChild(notification);
+
+    const duration = showUndo ? 10000 : type === "error" ? 5000 : 3000;
+
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = "slideOut 0.3s ease-out";
+            setTimeout(() => {
+                if (notification.parentNode) notification.remove();
+            }, 300);
+        }
+    }, duration);
+}
+
+function showLoading(message = "Loading...") {
+    if (isLoading) return;
+    isLoading = true;
+
+    const overlay = document.createElement("div");
+    overlay.id = "loading-overlay";
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        color: white;
+        font-family: 'Creepster', cursive;
+    `;
+
+    overlay.innerHTML = `
+        <div class='loading-spinner" style="
+        width: 50px;
+        height: 50px;
+        border: 3px solid rgba(255,255,255,0.3);
+        border-top: 3px solid #fff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;"></div>
+        <div style="font-size: 18px;">${message}</div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    loadingTimeout = setTimeout(() => {
+        hideLoading();
+        showNotification("Loading took too long. Pls refresh the page.", "warning");
+    }, 30000);
+}
+
+function hideLoading() {
+    isLoading = false;
+    if (loadingTimeout) {
+        clearTimeout(loadingTimeout);
+        loadingTimeout = null;
+    }
+
+    const overlay = document.getElementById("loading-overlay");
+    if (overlay) overlay.remove();
+}
+
+function showSectionLoading(sectionName) {
+    const section =
+        document.querySelector(`[data-section="${sectionName}"]`) ||
+        document.getElementById(sectionName) ||
+        document.querySelector(`.${sectionName}-section`);
+
+    if (section) {
+        const loader = document.createElement("div");
+        loader.className = "section-loader";
+        loader.style.cssText = `
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0.7;
+        `;
+        loader.innerHTML = `
+            <div style="
+                width: 20px;
+                height: 20px;
+                border: 2px solid rgba(255,255,255,0.3);
+                border-top: 2px solid #fff;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-right: 10px;"></div>
+            Loading ${sectionName}...
+        `;
+
+        section.appendChild(loader);
+    }
+}
+
+function hideSectionLoading(sectionName) {
+    const section =
+        document.querySelector(`[data-section="${sectionName}"]`) ||
+        document.getElementById(sectionName) ||
+        document.querySelector(`.${sectionName}-section`);
+
+    if (section) {
+        const loader = section.querySelector(".section-loader");
+        if (loader) {
+            loader.remove();
+        }
+    }
+}
+
+function showSectionError(sectionName, message) {
+    const section =
+        document.querySelector(`[data-section="${sectionName}"]`) ||
+        document.getElementById(sectionName) ||
+        document.querySelector(`.${sectionName}-section`);
+
+    if (section) {
+        const error = document.createElement("div");
+        error.className = "error-state";
+        error.innerHTML = `
+                <div class="error-state-icon">⚠️</div>
+                <div class="error-state-message">${message}<div>
+                <button id="retry-btn" class="btn btn-sm btn-secondary mt-4">Retry</button>
+            `;
+        section.appendChild(error);
+
+        error.querySelector("#retry-btn").addEventListener("click", () => {
+            location.reload();
+        });
+    }
+}
+
+function showErrorState(message) {
+    hideLoading();
+
+    const errorContainer = document.createElement("div");
+    errorContainer.id = "error-state";
+    errorContainer.className = "modal-overlay";
+    errorContainer.style.zIndex = "10000";
+
+    const content = document.createElement("div");
+    content.className = "error-state text-center";
+    content.style.cssText = `
+        background: rgba(120,45,45,0.95);
+        padding: var(--space-10);
+        border-radius: var(--radius-lg);
+        border: 2px solid var(--wc-danger);
+        max-width: 400px;
+    `;
+
+    content.innerHTML = `
+        <div class="error-state-icon">💀</div>
+        <div class="error-state-title">Un oh!</div>
+        <div class="error-state-message">${message}</div>
+        <button id="resurrect-btn" class="btn btn-primary mt-6">Resurrect Page</button>
+    `;
+
+    errorContainer.appendChild(content);
+    document.body.appendChild(errorContainer);
+
+    errorContainer.querySelector("#resurrect-btn").addEventListener("click", () => {
+        location.reload();
+    });
+}
+
+const style = document.createElement("style");
+style.textContent = `
+    @keyframes slideIn {
+        from {transform: translateX(400px); opacity: 0;}
+        to {transform: translateX(0); opacity: 1;}
+    }
+
+    @keyframes slideOut {
+        from{transform: translateX(0); opacity:1;}
+        to{transform: translateX(400px); opacity: 0;}
+    }
+
+    @keyframes spin {
+        0% {transform: rotate(0deg);}
+        100% {transform: rotate(360deg);}
+    }
+
+    @keyframes fadeUp {
+        from {opacity: 0; transform: translateY(20px);}
+        to {opacity: 1; transform: translateY(0);}
+    }
+
+    .section-loader, .section-error {
+        animation: fateInUp 0.3s ease-out;    
+    }
+
+    .search-clear-btn {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #6b8e6b;
+        font-size: 20px;
+        cursor: pointer;
+        padding: 4px 8px;
+        line-height: 1;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+
+    .search-clear-btn:hover {
+        color: #8ab88a;
+        background: rgba(107,142,107,0.2)
+    }
+
+    .load-more-container {
+        display: flex;
+        justify-content: center;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .load-more-btn {
+        min-width: 200px;
+    }
+    #results-count {
+        color: #8ab88a;
+        font-size: 14px;
+        padding: 10px;
+        text-align: center;
+    }
+`;
+document.head.appendChild(style);
+
+function showAchievements() {
+    const modal = document.getElementById("achievements-modal");
+    if (modal) {
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+    }
+}
+
+function showLeaderboards() {
+    const modal = document.getElementById("leaderboards-modal");
+    if (modal) {
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+    }
+}
+
+function setupModalListeners() {
+    try {
+        const showAchievementsBtn = document.getElementById("show-achievements");
+        if (showAchievementsBtn) showAchievementsBtn.addEventListener("click", showAchievements);
+
+        const showLeaderboardsBtn = document.getElementById("show-leaderboards");
+        if (showLeaderboardsBtn) showLeaderboardsBtn.addEventListener("click", showLeaderboards);
+
+        const closeAchievements = document.getElementById("close-achievements");
+        if (closeAchievements) {
+            closeAchievements.addEventListener("click", () => {
+                const modal = document.getElementById("achievements-modal");
+                if (modal) modal.style.display = "none";
+            });
+        }
+
+        const closeLeaderboards = document.getElementById("close-leaderboards");
+        if (closeLeaderboards) {
+            closeLeaderboards.addEventListener("click", () => {
+                const modal = document.getElementById("leaderboards-modal");
+                if (modal) modal.style.display = "none";
+            });
+        }
+
+        document.addEventListener("click", (e) => {
+            if (e.target.classList.contains("modal")) e.target.style.display = "none";
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                const achievementModal = document.getElementById("achievements-modal");
+                const leaderboardModal = document.getElementById("leaderboards-modal");
+
+                if (achievementModal && achievementModal.style.display === "flex") {
+                    achievementModal.style.display = "none";
+                    document.body.style.overflow = "";
+                    event.preventDefault();
+                } else if (leaderboardModal && leaderboardModal.style.display === "flex") {
+                    leaderboardModal.style.display = "none";
+                    document.body.style.overflow = "";
+                    event.preventDefault();
+                } else if (isSelectionMode) {
+                    toggleSelectionMode();
+                    event.preventDefault();
+                }
+            }
+        });
+
+        document.addEventListener("keydown", (event) => {
+            if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
+
+            const key = event.key.toLowerCase();
+            const ctrl = event.ctrlKey || event.metaKey;
+
+            if (ctrl && key === "f") {
+                const searchInput = document.getElementById("search-input");
+
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                    event.preventDefault();
+                }
+            }
+
+            if (ctrl && key === "a" && isSelectionMode) {
+                selectAll();
+                event.preventDefault();
+            }
+
+            if (!ctrl && !event.shiftKey && key === "s") {
+                toggleSelectionMode();
+                event.preventDefault();
+            }
+
+            if (key === "delete" && selected.size > 0) {
+                bulkResurrect();
+                event.preventDefault();
+            }
+
+            if (!ctrl && !event.shiftKey && key === "a" && !isSelectionMode) {
+                showAchievements();
+                event.preventDefault();
+            }
+
+            if (!ctrl && !event.shiftKey && key === "l") {
+                showLeaderboards();
+                event.preventDefault();
+            }
+
+            if (key === "?" || (event.shiftKey && key === "/")) {
+                showKeyboardShortcutsHelp();
+                event.preventDefault();
+            }
+        });
+    } catch (error) {
+        console.error("Error setting up modal listeners:", error);
+    }
+}
+
+function showKeyboardShortcutsHelp() {
+    const helpHTML = `
+        <div class="modal-overlay" id="shortcuts-modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2>Keyboard Shortcuts</h2>
+                    <button class="modal-close" id="shortcuts-close-btn" aria-label="Close shortcuts">x</button>
+                </div>
+                <div class="modal-body">
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4); align-items:center;">
+                        <kbd>${navigation.platform.includes("Mac") ? "Cmd" : "Ctrl"}+F</kbd><span>Focus search</span>
+                        <kbd>S</kbd><span>Toggle selection mode</span>
+                        <kbd>${navigation.platform.includes("Mac") ? "Cmd" : "Ctrl"}+A</kbd><span>Select all (in selection mode)</span>
+                        <kbd>Delete</kbd><span>Resurrect selected tabs</span>
+                        <kbd>A</kbd><span>View Achievements</span>
+                        <kbd>L</kbd><span>View Leaderboards</span>
+                        <kbd>Esc</kbd><span>Close modals / Exit selection mode</span>
+                        <kbd>?</kbd><span>Show this help</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const existing = document.getElementById("shortcuts-modal");
+    if (existing) existing.remove();
+
+    document.body.insertAdjacentHTML("beforeend", helpHTML);
+    document.body.style.overflow = "hidden";
+
+    const modal = document.getElementById("shortcuts-modal");
+    const closeBtn = document.getElementById("shortcuts-close-btn");
+
+    const cleanup = () => {
+        modal.remove();
+        document.body.style.overflow = "";
+    };
+
+    closeBtn.addEventListener("click", cleanup);
+
+    const escHandler = (e) => {
+        if (e.key === "Escape") {
+            cleanup();
+            document.removeEventListener("keydown", escHandler);
+        }
+    };
+    document.addEventListener("keydown", escHandler);
+
+    modal.addEventListener("click", (e) => {
+        if (e.target.id === "shortcuts-modal");
+        cleanup();
+    });
+}
+
+async function exportCemetery() {
+    try {
+        showLoading("Preparing export...");
+
+        const tombstones = await storage.getAllTombstones();
+        const settings = await storage.getSettings();
+        const achievements = await sotrage.getSetting("achievements");
+
+        const exportData = {
+            version: "1.0.0",
+            exportDate: new Date().toISOString(),
+            tombstones: tombstones,
+            settings: settings,
+            achievements: achievements || {},
+            metadata: {
+                totalTombstones: tombstones.length,
+                exportedBy: "WebCemetery",
+            },
+        };
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `webcemetery-backup-${new Date().toISOString().split("T")[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        hideLoading();
+        showNotification(`Successfully exported ${tombstones.length} tombstones`, "success");
+    } catch (error) {
+        hideLoading();
+        console.error("Error exporting cemetery:", error);
+        showNotification("Failed to export cemetery: " + error.message, "error");
+    }
+}
+
+async function importCemetery(event) {
+    const file = event.target.file[0];
+    if (!file) return;
+
+    try {
+        showLoading("Import cemetery data...");
+
+        const text = await file.text();
+        const importData = JSON.parse(text);
+
+        if (!importData.tombstones || !Array.isArray(importData.tombstones))
+            throw new Error("Invalid import file: missing tombstones array");
+
+        if (importData.version && importData.version !== "1.0.0")
+            console.warn("Import file version mismatch, attempting import anyway");
+
+        const existingCount = allTombstones.length;
+        const importCount = importData.tombstones.length;
+
+        let importMode = "merge";
+        if (existingCount > 0) {
+            const confirmed = await showConfirmDialog(
+                `You have ${existingCount} existing tombstones. Import file contains ${importCount} tombstones. \n\nDo you wnat to MERGE (add new) or REPLACE (delete existing)?`,
+                {
+                    title: "Inport Mode",
+                    confirmText: "Merge",
+                    cancelText: "Replace",
+                },
+            );
+            importMode = confirmed ? "merge" : "replace";
+        }
+
+        if (importMode === "replace") {
+            for (const tombstone of allTombstones) {
+                await storage.deleteTombstone(tombstone.id);
+            }
+        }
+
+        let importedCount = 0;
+        let skippedCount = 0;
+        const existingIds = new Set(allTombstones.map((t) => t.id));
+
+        for (const tombstone of importData.tombstones) {
+            if (importMode === "merge" && existingIds.has(tombstone.id)) {
+                skippedCount++;
+                continue;
+            }
+            if (!tombstone.id || !tombstone.url) {
+                skippedCount++;
+                continue;
+            }
+            if (isUnsafeUrl(tombstone.url)) {
+                skippedCount++;
+                continue;
+            }
+            await storage.addTombstone(tombstone);
+            importedCount++;
+        }
+
+        if (importData.settings) {
+            for (const [key, value] of Object.entries(importData.settings)) await storage.saveSettings(key, value);
+        }
+
+        await loadTombstones();
+        await loadStats();
+
+        hideLoading();
+        showNotification(
+            `Imported ${importCount} tombstones` + (skippedCount > 0 ? ` (${skippedCount} skipped)` : ""),
+            "success",
+        );
+        event.target.value = "";
+    } catch (error) {
+        hideLoading();
+        console.error("Error importing cemetery:", error);
+        showNotification("Failed to import: " + error.message, "error");
+        event.target.value = "";
+    }
+}
+
+// finally end, now cleanup ...
+window.addEventListener("beforeunload", () => {
+    if (window.webCemeteryCleanup) {
+        window.webCemeteryCleanup.forEach((cleanup) => {
+            try {
+                cleanup();
+            } catch (error) {
+                console.error("Error during cleanup:", error);
+            }
+        });
+    }
+});
