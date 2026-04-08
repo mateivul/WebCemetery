@@ -1803,3 +1803,14 @@ body.loading::after {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     transition: all 0.2s ease;
 }
+
+.load-more-btn:hover {
+    background: rgba(26, 58, 26, 0.8);
+    border-color: var(--wc-glow);
+    box-shadow: 0 6px 20px rgba(127, 223, 127, 0.2);
+    transform: translateY(-2px);
+}
+
+.load-more-btn:active {
+    transform: translateY(0);
+}

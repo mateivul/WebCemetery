@@ -1,0 +1,188 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>WebCemetery - Settings</title>
+        <link rel="stylesheet" href="options.css" />
+        <link rel="stylesheet" href="../styles/shared.css" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Space+Grotesk:wght@300..700&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div class="container">
+            <header class="header">
+                <h1>WebCemetery Settings</h1>
+                <p class="subtitle">Configure you cemetery experience</p>
+                <button id="exit-settings-btn" class="btn btn-secondary">Exit Settings</button>
+            </header>
+
+            <div class="settings-grid">
+                <section class="settings-section">
+                    <h2 class="section-title">Ghost Tab Detection</h2>
+
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <input type="checkbox" id="ghost-enabled" class="checkbox" />
+                            <span>Enable Ghost Tab Detection</span>
+                        </label>
+                        <p class="setting-description">Automatically kill tabs based on criteria below</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-labe">
+                            <input type="checkbox" id="detect-inactive" class="checkbox" />
+                            <span>Detect Inactive Tabs</span>
+                        </label>
+                        <div class="setting-control">
+                            <label>Kill tabs inactive for:</label>
+                            <input
+                                type="number"
+                                id="interactive-minutes"
+                                min="1"
+                                max="1400"
+                                value="240"
+                                class="input-number"
+                            />
+                            <span>minutes</span>
+                        </div>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="settin-label">
+                            <input type="checkbox" id="detect-duplicates" class="checkbox" />
+                            <span>Detect Duplicates Tabs</span>
+                        </label>
+                        <p class="setting-description">Kill duplicate tabs with the same URL</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-labe">
+                            <input type="checkbox" id="detect-resource" class="checkbox" />
+                            <span>Detect Resource Heavy Tabs</span>
+                        </label>
+                        <div class="setting-control">
+                            <label>Memory threshold:</label>
+                            <input
+                                type="number"
+                                id="memory-threshold"
+                                min="100"
+                                max="4000"
+                                step="50"
+                                value="500"
+                                class="input-number"
+                            />
+                            <span>MB</span>
+                        </div>
+                        <p class="setting-description">Chromium browsers only</p>
+                    </div>
+                </section>
+
+                <section class="settings-section">
+                    <h2 class="section-title">Auto Archive</h2>
+
+                    <div class="setting-item">
+                        <label class="settin-label">
+                            <input type="checkbox" id="archive-enabled" class="checkbox" />
+                            <span>Enable Auto Archive</span>
+                        </label>
+                        <p class="setting-description">Automatically remove old tombstones</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <div class="setting-control">
+                            <label>Delete tombstones older than:</label>
+                            <input type="number" id="archive-days" min="1" max="365" value="30" class="input-number" />
+                            <span>days</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="settings-section">
+                    <h2 class="section-title">Theme</h2>
+                    <div class="setting-item">
+                        <label class="setting-label">
+                            <input type="checkbox" id="animations-enabled" class="checkbox" />
+                            <span>Enable Animations</span>
+                        </label>
+                        <p class="setting-description">Fog effects and tombstone animations</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label class="setting-label">Theme Colors</label>
+                        <div class="theme-colors">
+                            <div class="color-picker-group">
+                                <label for="accent-color">Accent Color:</label>
+                                <input type="color" id="accent-color" value="#6b8e6b" class="color-picker" />
+                                <button class="reset-color-btn" data-target="accent-color" data-default="#6b8e6b">
+                                    Reset
+                                </button>
+                            </div>
+                            <div class="color-picker-group">
+                                <label for="highlight-color">Highlight Color:</label>
+                                <input type="color" id="highlight-color" value="#7fdf7f" class="color-picker" />
+                                <button class="reset-color-btn" data-target="highlight-color" data-default="#7fdf7f">
+                                    Reset
+                                </button>
+                            </div>
+                            <div class="color-picker-group">
+                                <label for="glow-color">Glow Color:</label>
+                                <input type="color" id="glow-color" value="#9fff9f" class="color-picker" />
+                                <button class="reset-color-btn" data-target="glow-color" data-default="#9fff9f">
+                                    Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="setting-section">
+                    <h2 class="section-title">Custom Epitaphs</h2>
+
+                    <div class="setting-item">
+                        <label class="setting-labe">
+                            <input type="checkbox" id="custom-epitaphs-enabled" class="checkbox" />
+                            <span>Use Custom Epitaphs</span>
+                        </label>
+                        <p class="setting-description">Add you own epitaph tamplates</p>
+                    </div>
+
+                    <div class="setting-item">
+                        <label for="custom-epitaphs-list">Your Epitaph Templates:</label>
+                        <p class="setting-description">
+                            One template per line. Use {title}, {domain} and {time} as placeholder.
+                        </p>
+                        <textarea
+                            id="custom-epitaphs-list"
+                            class="textarea-epitaphs"
+                            rows="8"
+                            placeholder="Here lies {title}, killed by curiosity&#x0A;{domain} -tab too many&#x0A;Survived {time} before meeting its doom&#x0A;Closed but not forgotten: {title}"
+                        ></textarea>
+                        <p class="setting-help">Example: "Here lies {title}, killed by too many tabs</p>
+                    </div>
+                </section>
+
+                <section class="settins-stction danger-zone">
+                    <h2 class="section-title">Danger Zone</h2>
+
+                    <div class="setting-item">
+                        <button id="clear-cemetery-btn" class="btn btn-danger">Clear Entire Cemetery</button>
+                        <p class="setting-description">Permanently delete all tombstones (cannot be undone)</p>
+                    </div>
+                </section>
+            </div>
+
+            <div class="footer">
+                <button id="save-btn" class="btn btn-primary">Save Settings</button>
+                <div id="save-status" class="save-status"></div>
+            </div>
+        </div>
+
+        <script src="../lib/settings.js"></script>
+        <script src="../lib/storage.js"></script>
+        <script src="options.js"></script>
+    </body>
+</html>
