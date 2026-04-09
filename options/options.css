@@ -46,7 +46,11 @@ body {
     font-style: italic;
 }
 
-.header .btn {
+.header-actions {
+    margin-top: 16px;
+}
+
+.settings-grid {
     display: flex;
     flex-direction: column;
     gap: 24px;

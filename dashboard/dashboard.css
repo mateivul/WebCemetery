@@ -261,7 +261,7 @@ body {
     animation: search-pulse 0.5s ease;
 }
 
-@keyframes serach-pulse {
+@keyframes search-pulse {
     0%,
     100% {
         border-color: var(--wc-glow);
@@ -278,16 +278,18 @@ body {
     /* flex-direction: column; */
 }
 
-.serach-results {
+.search-results {
     display: flex;
-    gap: 18px;
+    gap: 15px;
     align-items: center;
     font-size: var(--text-sm);
     margin-top: 10px;
+    padding: 6px 12px;
     background: rgba(45, 90, 45, 0.2);
     border-radius: 6px;
     border: 1px solid var(--accent);
     animation: fade-in 0.3s ease;
+    flex-basis: 100%;
 }
 
 @keyframes fade-in {
@@ -368,7 +370,7 @@ body {
     animation: search-pulse 0.5s ease;
 }
 
-@keyframes serach-pulse {
+@keyframes search-pulse {
     0%,
     100% {
         border-color: var(--highlight);
@@ -379,17 +381,18 @@ body {
     }
 }
 
-.serach-results {
+.search-results {
     display: flex;
     gap: 15px;
     align-items: center;
-    font-size: 13px;
+    font-size: var(--text-sm);
     margin-top: 10px;
-    padding: 8px 12px;
+    padding: 6px 12px;
     background: rgba(45, 90, 45, 0.2);
     border-radius: 6px;
     border: 1px solid var(--accent);
     animation: fade-in 0.3s ease;
+    flex-basis: 100%;
 }
 
 @keyframes fade-in {
@@ -550,6 +553,7 @@ body {
     top: 12px;
     left: 12px;
     z-index: 0;
+    opacity: 0;
     transform: opacity 0.2s ease;
 }
 
@@ -998,7 +1002,7 @@ body {
 
 .leaderboard-list {
     display: flex;
-    font-display: column;
+    flex-direction: column;
     gap: 12px;
     /* padding-top: 10px; */
     /* flex-grow: ; */
@@ -1372,7 +1376,7 @@ body.loading::after {
     backdrop-filter: blur(4px);
 }
 
-.modal.dashboard-modal .moadl-content {
+.modal.dashboard-modal .modal-content {
     background: linear-gradient(135deg, #0a1f0a 0%, var(--wc-bg-light) 50%, #1a3a1a 100%);
     border: 2px solid #6b8e6b;
     border-radius: 12px;
@@ -1730,7 +1734,7 @@ body.loading::after {
 }
 
 @media (max-width: 768px) {
-    .moadl-content {
+    .modal-content {
         width: 95vw;
         height: 90vh;
         padding: 20px;

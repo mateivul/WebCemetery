@@ -3,6 +3,7 @@ const browserAPI = typeof chrome !== "undefined" ? chrome : browser;
 let allTombstones = [];
 let filtered = [];
 let displayed = [];
+let currentSearchQuery = "";
 let statsCalc;
 let isLoading = false;
 let loadingTimeout = null;
@@ -85,6 +86,22 @@ async function loadStats() {
         showSectionError("statistics", "Failed to load statistics");
         throw error;
     }
+}
+
+function updateStatsFromMemory() {
+    const now = Date.now();
+    const todayStr = new Date().toISOString().split("T")[0];
+    const weekAgoMs = now - 7 * 24 * 60 * 60 * 1000;
+
+    const todayCount = allTombstones.filter(
+        (t) => new Date(t.killedAt).toISOString().split("T")[0] === todayStr,
+    ).length;
+    const weekCount = allTombstones.filter((t) => Number(t.killedAt) >= weekAgoMs).length;
+    const totalCount = allTombstones.length;
+
+    document.getElementById("stat-today").textContent = todayCount;
+    document.getElementById("stat-week").textContent = weekCount;
+    document.getElementById("stat-total").textContent = totalCount;
 }
 
 async function loadTombstones() {
@@ -463,7 +480,7 @@ function clearSelection() {
 function selectAll() {
     displayed.forEach((tombstone) => {
         selected.add(tombstone.id);
-        const element = document.querySelector(`[data-id="${tombstone.id}]`);
+        const element = document.querySelector(`[data-id="${tombstone.id}"]`);
         if (element) {
             element.classList.add("selected");
             const checkbox = element.querySelector(".select-checkbox");
@@ -663,8 +680,8 @@ async function bulkDelete() {
         filtered = filtered.filter((t) => !selected.has(t.id));
 
         clearSelection();
-        renderTombstones(filtered, true);
-        await updateStats();
+        renderTombstones();
+        updateStatsFromMemory();
         showNotification(`Deleted ${count} tombstone${count > 1 ? "s" : ""}`, "success");
     } catch (error) {
         console.error("Error bulk deleting", error);
@@ -775,7 +792,7 @@ function renderLeaderboard(elementId, items, nameGetter) {
 
 function setupEventListeners() {
     const searchInput = document.getElementById("search-input");
-    searchInput.addEventListener("input", debounce(onSerach, 150));
+    searchInput.addEventListener("input", debounce(onSearch, 150));
 
     setupSeacrchClear(searchInput);
 
@@ -859,10 +876,11 @@ function setupSeacrchClear(searchInput) {
     wrapper.appendChild(clearBtn);
 }
 
-function onSerach(event) {
+function onSearch(event) {
     const query = event.target.value.toLowerCase().trim();
     const searchInput = event.target;
 
+    currentSearchQuery = query;
     currentPage = 1;
     searchInput.classList.add("searching");
 
@@ -871,21 +889,16 @@ function onSerach(event) {
         updateSearchResults(allTombstones.length, 0);
     } else {
         const searchTerms = query.split(" ").filter((term) => term.length > 0);
-
         filtered = allTombstones.filter((t) => {
             const searchText = [t.title || "", t.domain || "", t.epitaph || "", t.url || "", t.killMethod || ""]
                 .join(" ")
                 .toLowerCase();
-            return searchTerms.evry((term) => searchText.includes(term));
+            return searchTerms.every((term) => searchText.includes(term));
         });
-
-        updateSearchResults(filtered.length, allTombstones.length - filtered.length);
     }
-
     setTimeout(() => {
         searchInput.classList.remove("searching");
     }, 200);
-
     applyFilters();
 }
 
@@ -905,23 +918,45 @@ function updateSearchResults(found, hidden) {
     }
 }
 
+function updateResultsCount() {
+    const el = document.getElementById("results-count");
+    if (!el) return;
+    const total = allTombstones.length;
+    const showing = filtered.length;
+    if (total === 0 || showing === total) {
+        el.textContent = "";
+        el.style.display = "none";
+    } else {
+        el.textContent = `Showing ${showing} of ${total}`;
+        el.style.display = "block";
+    }
+}
+
 function applyFilters() {
     const killMethodFilter = document.getElementById("filter-method").value;
-    const sortSelect = document.getElementById("sort-select");
-
     currentPage = 1;
-    document.body.classList.add("filtering");
-    requestAnimationFrame(() => {
-        let results = filtered;
-        if (killMethodFilter) results = results.filter((t) => t.killMethod === killMethodFilter);
 
-        filtered = results;
-        applySorting();
+    // let results = [...allTombstones];
 
-        setTimeout(() => {
-            document.body.classList.remove("filtering");
-        }, 100);
-    });
+    if (currentSearchQuery) {
+        const terms = currentSearchQuery.split(" ").filter((t) => t.length > 0);
+        filtered = results.filter((t) => {
+            const text = [t.title || "", t.domain || "", t.epitaph || "", t.url || "", t.killMethod || ""]
+                .join(" ")
+                .toLowerCase();
+            return terms.every((term) => text.includes(term));
+        });
+    } else {
+        filtered = [...allTombstones];
+    }
+
+    if (killMethodFilter) {
+        filtered = filtered.filter((t) => t.killMethod === killMethodFilter);
+    }
+
+    // filtered = results;
+    // updateSearchResults(filtered.length, allTombstones.length - filtered.length);
+    applySorting();
 }
 
 function applySorting() {
@@ -936,7 +971,7 @@ function applySorting() {
             aVal = aVal.toLowerCase();
             bVal = bVal.toLowerCase();
 
-            if (sortOrder === "arc") {
+            if (sortOrder === "asc") {
                 return aVal.localeCompare(bVal);
             } else return bVal.localeCompare(aVal);
         }
@@ -1458,8 +1493,9 @@ style.textContent = `
     #results-count {
         color: #8ab88a;
         font-size: 14px;
-        padding: 10px;
-        text-align: center;
+        padding: 6px 10px;
+        text-align: right;
+        display: none;
     }
 `;
 document.head.appendChild(style);
