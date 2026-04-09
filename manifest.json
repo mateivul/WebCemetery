@@ -25,7 +25,7 @@
         "service_worker": "background/background.js"
     },
 
-    "permissions": ["tabs", "storage", "notifications"],
+    "permissions": ["tabs", "storage", "notifications", "contextMenus", "alarms"],
 
     "host_permissions": ["<all_urls>"],
 

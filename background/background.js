@@ -76,6 +76,13 @@ async function performInitialization() {
     }
 }
 
+async function safeInitialize() {
+    if (isInitialized) return true;
+    if (initializationPromise) return initializationPromise;
+    initializationPromise = performInitialization();
+    return initializationPromise;
+}
+
 browserAPI.runtime.onInstalled.addListener(async (details) => {
     console.log("WebCemetery installed:", details.reason);
 
@@ -462,7 +469,7 @@ async function showAchievementsNotification(achievement) {
         legendary: "#ff8000",
     };
 
-    const iconUrl = browserAPI.runtime.getURL("icon/icon-128.png");
+    const iconUrl = browserAPI.runtime.getURL("icons/icon-128.png");
 
     await browserAPI.notifications.create(`achievement-${achievement.id}`, {
         type: "basic",
@@ -643,7 +650,7 @@ async function autoArchiveOldTombstones() {
 
 async function initStorage() {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open("tabCemetery", 1);
+        const request = indexedDB.open("WebCemeteryDB", 1);
 
         request.onerror = () => reject(request.error);
         request.onsuccess = () => {

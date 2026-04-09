@@ -72,7 +72,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function loadStats() {
     try {
         showSectionLoading("statistics");
-        const stats = await statsCalc.getKillCounts();
+        const stats = await statsCalc.getKilledCounts();
 
         document.getElementById("stat-today").textContent = stats.today || "0";
         document.getElementById("stat-week").textContent = stats.week || "0";
@@ -337,7 +337,7 @@ async function resurrectTab(tombstone, skipUndo = false) {
 
         try {
             const achievementManager = new AchievementManager(window.cemeteryStorage);
-            const stats = await statsCalc.getKillCounts();
+            const stats = await statsCalc.getKilledCounts();
             const newAchievements = await achievementManager.checkAchievements(stats);
             if (newAchievements.length > 0) {
                 newAchievements.forEach((achievement) => {
@@ -511,7 +511,7 @@ async function bulkResurrect() {
 
         try {
             const achievementManager = new AchievementManager(window.cemeteryStorage);
-            const stats = await statsCalc.getKillCounts();
+            const stats = await statsCalc.getKilledCounts();
             const newAchievements = await achievementManager.checkAchievements(stats);
             if (newAchievements.length > 0) {
                 newAchievements.forEach((achievement) => {
@@ -653,7 +653,7 @@ async function bulkDelete() {
 
     try {
         const deleteTombstones = allTombstones.filter((t) => selected.has(t.id));
-        addToUndoBuffer("bulk-delete", deletedTombstones);
+        addToUndoBuffer("bulk-delete", deleteTombstones);
 
         for (const tombstoneId of selected) {
             await storage.deleteTombstone(tombstoneId);
@@ -664,7 +664,7 @@ async function bulkDelete() {
 
         clearSelection();
         renderTombstones(filtered, true);
-        updateStats();
+        await updateStats();
         showNotification(`Deleted ${count} tombstone${count > 1 ? "s" : ""}`, "success");
     } catch (error) {
         console.error("Error bulk deleting", error);
@@ -774,7 +774,7 @@ function renderLeaderboard(elementId, items, nameGetter) {
 }
 
 function setupEventListeners() {
-    const searchInput = document.getElementById("search-inout");
+    const searchInput = document.getElementById("search-input");
     searchInput.addEventListener("input", debounce(onSerach, 150));
 
     setupSeacrchClear(searchInput);
@@ -793,7 +793,7 @@ function setupEventListeners() {
     const exportBtn = document.getElementById("export-btn");
     if (exportBtn) exportBtn.addEventListener("click", exportCemetery);
 
-    const importBtn = document.getElementById("inport-btn");
+    const importBtn = document.getElementById("import-btn");
     if (importBtn) {
         importBtn.addEventListener("click", () => {
             document.getElementById("import-file").click();
@@ -1102,7 +1102,7 @@ function formatTime(seconds) {
 
 function formatKillMethod(method) {
     const labels = {
-        manual: "Manula",
+        manual: "Manual",
         "manual-close": "Closed",
         "keyboard-shortcut": "Shortcut",
         "auto-ghost": "Ghost",
@@ -1693,7 +1693,7 @@ async function importCemetery(event) {
         let importMode = "merge";
         if (existingCount > 0) {
             const confirmed = await showConfirmDialog(
-                `You have ${existingCount} existing tombstones. Import file contains ${importCount} tombstones. \n\nDo you wnat to MERGE (add new) or REPLACE (delete existing)?`,
+                `You have ${existingCount} existing tombstones. Import file contains ${importCount} tombstones. \n\nDo you want to MERGE (add new) or REPLACE (delete existing)?`,
                 {
                     title: "Inport Mode",
                     confirmText: "Merge",
