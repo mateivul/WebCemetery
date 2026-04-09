@@ -1,6 +1,5 @@
 importScripts(
     "../lib/settings.js",
-    "../lib/storage.js",
     "../lib/achievements.js",
     "../lib/epitaph-generator.js",
     "../lib/stats-calculator.js",
@@ -463,7 +462,7 @@ async function showAchievementsNotification(achievement) {
         legendary: "#ff8000",
     };
 
-    const iconUrl = browserAPI.runtime.getURL("icon/icon128.png");
+    const iconUrl = browserAPI.runtime.getURL("icon/icon-128.png");
 
     await browserAPI.notifications.create(`achievement-${achievement.id}`, {
         type: "basic",

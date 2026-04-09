@@ -299,7 +299,7 @@ async function incrementResurrectionCount(delta = 1) {
     try {
         const existing = await storage.getSetting("resurrections");
         const current = existing && typeof existing.count === "number" ? existing.count : 0;
-        await storage.saveSettings("resurrections", { count: Math.max(0, current + delta) });
+        await storage.saveSetting("resurrections", { count: Math.max(0, current + delta) });
     } catch (e) {
         console.warn("Failed to update resurrection count:", e);
     }

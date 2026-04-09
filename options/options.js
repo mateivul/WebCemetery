@@ -82,7 +82,7 @@ async function saveSettings() {
                 enabled: document.getElementById("archive-enabled").checked,
                 daysToKeep: Math.max(
                     1,
-                    Math.min(365, parseInt(document.getElementById("archive.days").value, 10) || 30),
+                    Math.min(365, parseInt(document.getElementById("archive-days").value, 10) || 30),
                 ),
             },
             theme: {
