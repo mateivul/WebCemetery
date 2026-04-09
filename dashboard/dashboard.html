@@ -21,7 +21,7 @@
                     <button id="export-btn" class="icon-btn" title="Export Cemetery" aria-label="Export cemetery data">
                         <span class="btn-text">Export</span>
                     </button>
-                    <button class="icon btn" id="import-btn" title="Import Cemetery" aria-label="Import cemetery data">
+                    <button class="icon-btn" id="import-btn" title="Import Cemetery" aria-label="Import cemetery data">
                         <span class="btn-text">Import</span>
                     </button>
                     <input
@@ -50,7 +50,7 @@
                 </div>
             </section>
 
-            <section class="controls" rolse="search">
+            <section class="controls" role="search">
                 <div class="search-bar">
                     <input
                         type="search"
@@ -75,7 +75,7 @@
                             <option value="killedAt-asc">Oldest First</option>
                             <option value="timeAlive-desc">Longest Lived</option>
                             <option value="timeAlive-asc">Shortest Lived</option>
-                            <option value="domain-asc">Domain (A-X)</option>
+                            <option value="domain-asc">Domain (A-Z)</option>
                         </select>
                     </div>
                     <div id="results-count" role="status" aria-label="polite"></div>
@@ -119,7 +119,7 @@
             <main role="main">
                 <section class="cemetery-section" aria-labelledby="cemetery-heading">
                     <div class="section-header">
-                        <h2 class="cemetery-healing">Cemetery</h2>
+                        <h2 class="cemetery-heading">Cemetery</h2>
                         <div class="section-actions">
                             <button id="show-achievements" class="btn-link" aria-label="View achievements">
                                 View Achievements
@@ -143,9 +143,9 @@
                 </section>
             </main>
 
-            <section class="chievements-section" style="display: none" aria-hidden="true">
+            <section class="achievements-section" style="display: none" aria-hidden="true">
                 <h2 class="section-title">Achievements</h2>
-                <div class="chievements-stats">
+                <div class="achievements-stats">
                     <div class="achievement-stat">
                         <span class="achievement-score" id="total-score-hidden">0</span>
                         <span class="achievement-label">Total Score</span>

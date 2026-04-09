@@ -59,14 +59,14 @@ body {
     margin-bottom: 4px;
 }
 
-.stat-labe {
+.stat-label {
     font-size: 11px;
     color: #8a9a8a;
 }
 
 .actions-section {
     display: flex;
-    font-display: column;
+    flex-direction: column;
     gap: 10px;
     margin-bottom: 16px;
 }
@@ -191,7 +191,7 @@ body {
 }
 
 /* for touch in popup */
-@media (hover: noen) and (pointer: coarse) {
+@media (hover: none) and (pointer: coarse) {
     .btn:hover {
         transform: none;
     }
@@ -264,6 +264,6 @@ body {
     margin: -1px;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
-    white-space: nowarp;
+    white-space: nowrap;
     border: 0;
 }

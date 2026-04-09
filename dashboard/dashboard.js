@@ -299,7 +299,7 @@ async function incrementResurrectionCount(delta = 1) {
     try {
         const existing = await storage.getSetting("resurrections");
         const current = existing && typeof existing.count === "number" ? existing.count : 0;
-        await sotrag.saveSettings("resurrections", { count: Math.max(0, current + delta) });
+        await storage.saveSettings("resurrections", { count: Math.max(0, current + delta) });
     } catch (e) {
         console.warn("Failed to update resurrection count:", e);
     }
@@ -1628,8 +1628,7 @@ function showKeyboardShortcutsHelp() {
     document.addEventListener("keydown", escHandler);
 
     modal.addEventListener("click", (e) => {
-        if (e.target.id === "shortcuts-modal");
-        cleanup();
+        if (e.target.id === "shortcuts-modal") cleanup();
     });
 }
 
@@ -1639,7 +1638,7 @@ async function exportCemetery() {
 
         const tombstones = await storage.getAllTombstones();
         const settings = await storage.getSettings();
-        const achievements = await sotrage.getSetting("achievements");
+        const achievements = await storage.getSetting("achievements");
 
         const exportData = {
             version: "1.0.0",
@@ -1673,7 +1672,7 @@ async function exportCemetery() {
 }
 
 async function importCemetery(event) {
-    const file = event.target.file[0];
+    const file = event.target.files[0];
     if (!file) return;
 
     try {

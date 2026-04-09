@@ -130,7 +130,7 @@ async function saveSettings() {
         }
 
         currentSettings = settings;
-        statusEl.textContent = "Settings save successfully";
+        statusEl.textContent = "Settings saved successfully";
         statusEl.className = "save-status success";
 
         setTimeout(() => {
@@ -164,6 +164,7 @@ async function clearCemetery() {
     if (!confirmed) return;
 
     const doubleConfirm = confirm("This is you LAST chace!\n\n" + "Click OK to PERMANENTLY delete everything.");
+    if (!doubleConfirm) return;
 
     try {
         const tombstones = await storage.getAllTombstones();

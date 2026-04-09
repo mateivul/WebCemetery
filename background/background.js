@@ -416,7 +416,7 @@ async function killTab(tab, killMethod = "manual", customEpitaph = null) {
 
         if (achievementManager) {
             const stats = await calculateStats();
-            const newAchievement = await achievementManager.checkAchievements(stats, tombstone);
+            const newAchievements = await achievementManager.checkAchievements(stats, tombstone);
 
             for (const achievement of newAchievements) {
                 try {
@@ -463,7 +463,7 @@ async function showAchievementsNotification(achievement) {
         legendary: "#ff8000",
     };
 
-    const iconUrl = browserAPI.runtime.getUrl("icon/icon128.png");
+    const iconUrl = browserAPI.runtime.getURL("icon/icon128.png");
 
     await browserAPI.notifications.create(`achievement-${achievement.id}`, {
         type: "basic",
@@ -488,7 +488,7 @@ async function showAchievementsNotification(achievement) {
     const clearTime = achievement.rarity === "legendary" ? 8000 : 5000;
     setTimeout(() => {
         browserAPI.notifications.clear(`achievement-${achievement.id}`);
-        if (browserAPI.rarity === "legendary") {
+        if (achievement.rarity === "legendary") {
             browserAPI.notifications.clear(`legendary-${achievement.id}`);
         }
     }, clearTime);
@@ -757,7 +757,7 @@ async function getSettings() {
     });
 }
 
-async function deleteOldTombstones(befromDate) {
+async function deleteOldTombstones(beforeDate) {
     if (!storage) await safeInitialize();
 
     if (!storage) {
@@ -775,7 +775,7 @@ async function deleteOldTombstones(befromDate) {
                 const all = getAllRequest.result || [];
                 let count = 0;
                 let completed = 0;
-                const toDelete = all.filter((tombstone) => tombstone.killedAt < befromDate);
+                const toDelete = all.filter((tombstone) => tombstone.killedAt < beforeDate);
 
                 if (toDelete.length === 0) {
                     resolve(0);

@@ -89,7 +89,8 @@ body {
     --bg-primary: var(--wc-bg-1);
     --bg-secondary: var(--wc-bg-2);
     --bg-tertiary: var(--wc-bg-3);
-    --dark-bg: var(--wc-bg-0) --text-color: var(--wc-text);
+    --dark-bg: var(--wc-bg-0);
+    --text-color: var(--wc-text);
     --text-dim: var(--wc-text-muted);
 
     --accent: var(--wc-accent);
@@ -392,7 +393,7 @@ kbd {
 
 .btn-primary:hover {
     background: #3d7a3d;
-    box-shadow: 0 4pc 16px rgba(127, 223, 127, 0.25);
+    box-shadow: 0 4px 16px rgba(127, 223, 127, 0.25);
 }
 
 .btn-secondary {
@@ -572,7 +573,7 @@ kbd {
 }
 
 @keyframes slideUp {
-    form {
+    from {
         opacity: 0;
         transform: translateY(20px);
     }
