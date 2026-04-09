@@ -9,8 +9,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function loadTheme() {
     try {
-        const response = await sendMessage({ action: "getSetteings" });
-        if (!response?.succes) return;
+        const response = await sendMessage({ action: "getSettings" });
+        if (!response?.success) return;
 
         const theme = response.settings?.theme;
 
@@ -21,7 +21,7 @@ async function loadTheme() {
             if (colors.highlight) root.style.setProperty("--highlight", colors.highlight);
             if (colors.glow) root.style.setProperty("--glow", colors.glow);
         }
-        document.body.classList.toggle("no-animations", theme?.animationsEnabled === flase);
+        document.body.classList.toggle("no-animations", theme?.animationsEnabled === false);
     } catch (error) {
         console.warn("Failed loading theme in popup:", error);
     }
@@ -33,7 +33,7 @@ async function loadStats() {
 
         const response = await sendMessage({ action: "getStats" });
 
-        if (response.succes) {
+        if (response.success) {
             const stats = response.stats;
             document.getElementById("stat-today").textContent = stats.today;
             document.getElementById("stat-week").textContent = stats.week;
@@ -68,7 +68,7 @@ function setupEventListeners() {
 
             const response = await sendMessageWithRetry({ action: "killCurrentTab" });
 
-            if (response.succes) {
+            if (response.success) {
                 window.close();
             } else {
                 console.error("Failed to kill tab:", response.error);
@@ -94,7 +94,7 @@ function setupEventListeners() {
 
     document.getElementById("settings-link").addEventListener("click", (e) => {
         e.preventDefault();
-        browserAPI.runtime.openOpstionsPage();
+        browserAPI.runtime.openOptionsPage();
         window.close();
     });
 }
@@ -112,7 +112,7 @@ function sendMessage(message) {
                 return;
             }
 
-            resolve(resolve);
+            resolve(response);
         });
     });
 }

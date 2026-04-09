@@ -1,11 +1,12 @@
 importScripts(
     "../lib/settings.js",
+    "../lib/storage.js",
     "../lib/achievements.js",
     "../lib/epitaph-generator.js",
     "../lib/stats-calculator.js",
 );
 
-const browserAPI = typeof chrome !== "undefined" ? chrome : browserAPI;
+const browserAPI = typeof chrome !== "undefined" ? chrome : browser;
 
 let storage;
 let achievementManager;
@@ -42,8 +43,8 @@ async function performInitialization() {
         initializationState.achievements = true;
 
         try {
-            await browserAPI.contextMenu.removeAll();
-            browserAPI.contextMenu.create({
+            await browserAPI.contextMenus.removeAll();
+            browserAPI.contextMenus.create({
                 id: "kill-tab",
                 title: "Kill Tab and Send to Cemetery",
                 contexts: ["page"],
@@ -249,9 +250,9 @@ browserAPI.alarms.onAlarm.addListener(async (alarm) => {
 
 const tabCreationTimes = new Map();
 const tabInfo = new Map();
-const manuallyKilledTabs = Map();
-const inFlightKillTabs = Map();
-const recentlyKilledTabs = Map();
+const manuallyKilledTabs = new Set();
+const inFlightKillTabs = new Set();
+const recentlyKilledTabs = new Map();
 
 const CONSTANTS = {
     SETTINGS_CACHE_DURATION: 5 * 60 * 1000,
@@ -312,7 +313,7 @@ browserAPI.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
             const domain = extractDomain(storedTabInfo.url);
 
             const tombstone = {
-                if: generateUUID(),
+                id: generateUUID(),
                 url: storedTabInfo.url,
                 title: storedTabInfo.title || "Untitled Tab",
                 favicon: storedTabInfo.favIconUrl,
@@ -395,7 +396,7 @@ async function killTab(tab, killMethod = "manual", customEpitaph = null) {
         const favicon = tab.favIconUrl || "";
 
         const tombstone = {
-            if: generateUUID(),
+            id: generateUUID(),
             url: tabUrl,
             title: tab.title || "Untitled",
             favicon: favicon,
@@ -630,9 +631,9 @@ async function detectAndKillGhostTabs() {
 async function autoArchiveOldTombstones() {
     try {
         const settings = await getCachedSettings();
-        if (!settings.autoArchieve.enabled) return;
+        if (!settings.autoArchive.enabled) return;
 
-        const daysMs = settings.autoArchieve.daysToKeep * 24 * 60 * 60 * 1000;
+        const daysMs = settings.autoArchive.daysToKeep * 24 * 60 * 60 * 1000;
         const beforeDate = Date.now() - daysMs;
         const count = await deleteOldTombstones(beforeDate);
         console.log(`Auto-archived ${count} old tombstones`);
@@ -655,7 +656,7 @@ async function initStorage() {
             const db = event.target.result;
 
             if (!db.objectStoreNames.contains("tombstones")) {
-                const tombstoneStore = db.createObjectStore("tombstone", { keyPath: "id" });
+                const tombstoneStore = db.createObjectStore("tombstones", { keyPath: "id" });
                 tombstoneStore.createIndex("killedAt", "killedAt", { unique: false });
                 tombstoneStore.createIndex("domain", "domain", { unique: false });
             }
@@ -675,7 +676,7 @@ async function initStorage() {
 async function saveTombstone(tombstone) {
     return new Promise((resolve, reject) => {
         const tx = storage.transaction(["tombstones", "stats"], "readwrite");
-        const tombstoneStore = tx.objectStore("tombstone");
+        const tombstoneStore = tx.objectStore("tombstones");
         const statsStore = tx.objectStore("stats");
 
         const tombstoneRequest = tombstoneStore.add(tombstone);
@@ -687,7 +688,7 @@ async function saveTombstone(tombstone) {
             statsRequest.onsuccess = () => {
                 const existing = statsRequest.result;
                 const count = existing ? existing.count + 1 : 1;
-                const updateRequest = statsRequest.put({ date, count });
+                const updateRequest = statsStore.put({ date, count });
 
                 updateRequest.onsuccess = () => resolve();
                 updateRequest.onerror = () => reject(updateRequest.error);
@@ -746,7 +747,7 @@ async function getSettings() {
                     setting[item.key] = item.value;
                 });
 
-                resolve(WC_SETTINGS.mergeWithDefaultSettings(settings));
+                resolve(WC_SETTINGS.mergeWithDefaultSettings(setting));
             };
             request.onerror = () => reject(request.error);
         } catch (error) {

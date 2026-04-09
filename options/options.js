@@ -79,10 +79,10 @@ async function saveSettings() {
                 ),
             },
             autoArchive: {
-                enabled: document.getElementById("achive-enabled").checked,
+                enabled: document.getElementById("archive-enabled").checked,
                 daysToKeep: Math.max(
                     1,
-                    Math.min(365, parseInt(document.getElementById("achive.days").value, 10) || 30),
+                    Math.min(365, parseInt(document.getElementById("archive.days").value, 10) || 30),
                 ),
             },
             theme: {
@@ -109,10 +109,10 @@ async function saveSettings() {
 
         while (retryCount < MAX_RETRIES && !saveSuccess) {
             try {
-                await storage.saveSettings("ghostDetection", settings.ghostDetection);
-                await storage.saveSettings("autoArchive", settings.autoArchive);
-                await storage.saveSettings("theme", settings.theme);
-                await storage.saveSettings("customEpitaphs", settings.customEpitaphs);
+                await storage.saveSetting("ghostDetection", settings.ghostDetection);
+                await storage.saveSetting("autoArchive", settings.autoArchive);
+                await storage.saveSetting("theme", settings.theme);
+                await storage.saveSetting("customEpitaphs", settings.customEpitaphs);
                 saveSuccess = true;
             } catch (error) {
                 retryCount++;
@@ -276,6 +276,6 @@ function updateFieldStates() {
     document.getElementById("detect-resource").disabled = !ghostEnabled;
     document.getElementById("inactive-minutes").disabled = !ghostEnabled || !inactiveEnabled;
     document.getElementById("memory-threshold").disabled = !ghostEnabled || !resourceEnabled;
-    document.getElementById("arhive-days").disabled = !archiveEnabled;
+    document.getElementById("archive-days").disabled = !archiveEnabled;
     document.getElementById("custom-epitaphs-list").disabled = !customEpitaphsEnabled;
 }
