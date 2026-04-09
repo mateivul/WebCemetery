@@ -59,27 +59,27 @@
                         autocomplete="off"
                         aria-label="Search tombstonesby title, domain, or URL"
                     />
-                    <div class="filters">
-                        <label for="filter-method" class="sr-only">Filter by kill method</label>
-                        <select id="filter-method" class="filter-select" aria-label="Filter tombstones by kill method">
-                            <option value="">All Kill Methods</option>
-                            <option value="manual">Manual</option>
-                            <option value="manual-close">Manual Close</option>
-                            <option value="auto-ghost">Ghost Detection</option>
-                            <option value="auto-duplicate">Duplicates</option>
-                            <option value="auto-resource">Resource Heavy</option>
-                        </select>
-                        <label for="sort-select" class="sr-only">Sort tombstones</label>
-                        <select id="sort-select" class="filter-select" aria-label="Sort tombstones">
-                            <option value="killedAt-desc">Recently Killed</option>
-                            <option value="killedAt-asc">Oldest First</option>
-                            <option value="timeAlive-desc">Longest Lived</option>
-                            <option value="timeAlive-asc">Shortest Lived</option>
-                            <option value="domain-asc">Domain (A-Z)</option>
-                        </select>
-                    </div>
-                    <div id="results-count" role="status" aria-label="polite"></div>
                 </div>
+                <div class="filters">
+                    <label for="filter-method" class="sr-only">Filter by kill method</label>
+                    <select id="filter-method" class="filter-select" aria-label="Filter tombstones by kill method">
+                        <option value="">All Kill Methods</option>
+                        <option value="manual">Manual</option>
+                        <option value="manual-close">Manual Close</option>
+                        <option value="auto-ghost">Ghost Detection</option>
+                        <option value="auto-duplicate">Duplicates</option>
+                        <option value="auto-resource">Resource Heavy</option>
+                    </select>
+                    <label for="sort-select" class="sr-only">Sort tombstones</label>
+                    <select id="sort-select" class="filter-select" aria-label="Sort tombstones">
+                        <option value="killedAt-desc">Recently Killed</option>
+                        <option value="killedAt-asc">Oldest First</option>
+                        <option value="timeAlive-desc">Longest Lived</option>
+                        <option value="timeAlive-asc">Shortest Lived</option>
+                        <option value="domain-asc">Domain (A-Z)</option>
+                    </select>
+                </div>
+                <div id="results-count" role="status" aria-label="polite"></div>
             </section>
 
             <section
