@@ -809,44 +809,38 @@ async function deleteOldTombstones(beforeDate) {
 
 async function calculateStats() {
     return new Promise((resolve, reject) => {
-        const tx = storage.transaction(["tombstones", "stats"], "readonly");
+        const tx = storage.transaction(["tombstones"], "readonly");
         const tombstoneStore = tx.objectStore("tombstones");
-        const statsStore = tx.objectStore("stats");
+        // const statsStore = tx.objectStore("stats");
+        const allRequest = tombstoneStore.getAll();
 
-        const now = new Date();
-        const today = now.toISOString().split("T")[0];
-        const todayRequest = statsStore.get(today);
+        // const now = new Date();
+        // const today = now.toISOString().split("T")[0];
+        // const todayRequest = statsStore.get(today);
 
-        todayRequest.onsuccess = () => {
-            const todayStat = todayRequest.result || { count: 0 };
-            const allStatsRequest = statsStore.getAll();
+        allRequest.onsuccess = () => {
+            const tombstones = allRequest.result || [];
+            const now = new Date();
+            const todayStr = now.toISOString().split("T")[0];
+            const weekAgoMs = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+            const monthAgoMs = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+            // const allStatsRequest = statsStore.getAll();
 
-            allStatsRequest.onsuccess = () => {
-                const weekStats = allStatsRequest.result || [];
-                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                const weekCount = weekStats
-                    .filter((s) => s.date >= weekAgo.toISOString().split("T")[0])
-                    .reduce((sum, s) => sum + s.count, 0);
-                const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                const monthCount = weekStats
-                    .filter((s) => s.date >= monthAgo.toISOString().split("T")[0])
-                    .reduce((sum, s) => sum + s.count, 0);
-                const countRequest = tombstoneStore.count();
+            const todayCount = tombstones.filter(
+                (t) => new Date(t.killedAt).toISOString().split("T")[0] === todayStr,
+            ).length;
+            const weekCount = tombstones.filter((t) => Number(t.killedAt) >= weekAgoMs).length;
+            const monthCount = tombstones.filter((t) => Number(t.killedAt) >= monthAgoMs).length;
 
-                countRequest.onsuccess = () => {
-                    resolve({
-                        today: todayStat.count,
-                        week: weekCount,
-                        month: monthCount,
-                        total: countRequest.result,
-                    });
-                };
-                countRequest.onerror = () => reject(countRequest.error);
-            };
-            allStatsRequest.onerror = () => reject(allStatsRequest.error);
+            resolve({
+                today: todayCount,
+                week: weekCount,
+                month: monthCount,
+                total: tombstones.length,
+            });
         };
 
-        todayRequest.onerror = () => reject(todayRequest.error);
+        allRequest.onerror = () => reject(allRequest.error);
     });
 }
 
