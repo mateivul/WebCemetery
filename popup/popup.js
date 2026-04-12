@@ -94,7 +94,8 @@ function setupEventListeners() {
 
     document.getElementById("settings-link").addEventListener("click", (e) => {
         e.preventDefault();
-        browserAPI.runtime.openOptionsPage();
+        // browserAPI.runtime.openOptionsPage();
+        browserAPI.tabs.create({ url: browserAPI.runtime.getURL("options/options.html") });
         window.close();
     });
 }

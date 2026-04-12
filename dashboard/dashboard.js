@@ -804,7 +804,8 @@ function setupEventListeners() {
 
     const settingsBtn = document.getElementById("settings-btn");
     settingsBtn.addEventListener("click", () => {
-        browserAPI.runtime.openOptionsPage();
+        // browserAPI.runtime.openOptionsPage();
+        browserAPI.tabs.create({ url: browserAPI.runtime.getURL("options/options.html") });
     });
 
     const exportBtn = document.getElementById("export-btn");
