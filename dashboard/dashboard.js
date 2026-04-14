@@ -283,10 +283,7 @@ function createTombstoneElement(tombstone) {
     `;
 
     const resurrectBtn = div.querySelector(".resurrect-btn");
-    const resurrectHandler = (e) => {
-        e.stopPropagation();
-        resurrectTab(tombstone);
-    };
+    const resurrectHandler = (e) => { e.stopPropagation(); resurrectTab(tombstone); };
     resurrectBtn.addEventListener("click", resurrectHandler);
 
     const cardClickHandler = () => {

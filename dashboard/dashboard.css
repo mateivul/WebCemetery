@@ -34,7 +34,7 @@ body {
 
 @keyframes title-glow {
     from {
-        text-shadow: 0 0 8px var(--wc-glow-dim, rgba(127, 223, 0.18));
+        text-shadow: 0 0 8px var(--wc-glow-dim, rgba(127, 223, 127, 0.18));
     }
     to {
         text-shadow:

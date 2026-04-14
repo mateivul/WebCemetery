@@ -149,7 +149,7 @@ async function sendMessageWithRetry(message) {
     } catch (error) {
         const msg = error?.message || "";
         const retryable =
-            msg.toLowerCase().includes("Receving end doesnt exist") ||
+            msg.toLowerCase().includes("receiving end does not exist") ||
             msg.includes("Could not establish connection") ||
             msg.includes("The message port closed");
 
