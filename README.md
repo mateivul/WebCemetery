@@ -9,6 +9,8 @@ So when you close a tab either with keyboard shortcut or manually or from the ex
 Also there are some other features like: auto-ghost which kills tabs not used for an time set by the user in the **Settings** page; and duplicate removal and a resource-heavy setting which kills tabs that use too much memory.
 Also something cool is the epitaphs for each tombsotne which you can customize.
 
+New features: browser notifications if you revisit a tab you killed many times, and custom epitaphs on manual kill.
+
 ### how you can insall it
 
 Chrome / something running on Chromium
