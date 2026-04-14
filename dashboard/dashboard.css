@@ -31,9 +31,10 @@ body {
     animation: title-glow 3s ease-in-out infinite alternate;
     margin-bottom: 4px;
 }
+
 @keyframes title-glow {
-    form {
-        text-shadow: 0 0 8px var(--wc-glow-dim, rgba(127, 223, 0.18));
+    from {
+        text-shadow: 0 0 8px var(--wc-glow-dim, rgba(127, 223, 127, 0.18));
     }
     to {
         text-shadow:
@@ -126,6 +127,7 @@ body {
 .filter-select {
     min-width: 148px;
 }
+
 #results-count {
     font-size: 11px;
     color: #5a7a5a;
@@ -157,7 +159,7 @@ body {
     display: flex;
     align-items: center;
     gap: 7px;
-    font-weight: wrap;
+    flex-wrap: wrap;
 }
 
 .bulk-btn {
@@ -259,6 +261,7 @@ body {
     border-color: var(--wc-glow, #7fdf7f);
     background: rgba(14, 36, 14, 0.8);
 }
+
 @keyframes rise-from-ground {
     from {
         opacity: 0;
@@ -270,7 +273,7 @@ body {
     }
 }
 
-.body.selection-mode .tombstone {
+body.selection-mode .tombstone {
     cursor: pointer;
 }
 
@@ -287,9 +290,10 @@ body {
 .tombstone-header {
     display: flex;
     gap: 8px;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 9px;
 }
+
 .tombstone-favicon {
     width: 20px;
     height: 20px;
@@ -336,7 +340,7 @@ body {
     font-family: "Crimson Text", Georgia, serif;
     font-style: italic;
     font-size: 13px;
-    color: #7a8e7a;
+    color: #7a8e70;
     line-height: 1.5;
 }
 
@@ -375,6 +379,7 @@ body {
     text-align: center;
     padding: 22px 0 6px;
 }
+
 .empty-state {
     text-align: center;
     padding: 56px 20px;
@@ -502,11 +507,11 @@ body {
     background: rgba(70, 130, 70, 0.3);
     color: #6ab46a;
 }
-.rarity-common {
+.rarity-rare {
     background: rgba(70, 70, 150, 0.3);
     color: #7070b8;
 }
-.rarity-common {
+.rarity-legendary {
     background: rgba(150, 110, 20, 0.3);
     color: #b09030;
 }
@@ -567,8 +572,9 @@ body {
     display: flex;
     align-items: center;
     gap: 7px;
-    font-size: 112px;
+    font-size: 12px;
 }
+
 .leaderboard-rank {
     color: #4a6a4a;
     font-size: 11px;
@@ -627,6 +633,9 @@ body {
         letter-spacing: 2px;
     }
     .stats-panel {
+        gap: 10px;
+    }
+    .controls {
         flex-direction: column;
         align-items: stretch;
     }
@@ -652,7 +661,8 @@ body {
         gap: 14px;
     }
 }
-@media (max-width: 400px) {
+
+@media (max-width: 480px) {
     .cemetery-grid {
         grid-template-columns: 1fr;
     }
@@ -666,6 +676,7 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
 @media (prefers-reduced-motion: reduce) {
     .tombstone,
     .tombstone::before,

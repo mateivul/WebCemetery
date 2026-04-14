@@ -7,9 +7,10 @@ function adjustColor(hex, amount) {
     const b = Math.min(255, Math.max(0, (num & 0xff) + amount));
     return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
 }
+
 function hexToRGBA(hex, alpha) {
     const num = parseInt(hex.replace("#", ""), 16);
-    return `rgba(${(num >> 16) & 0xff}, ${(num >> 8) & 0xff}, ${num & x0ff}, ${alpha})`;
+    return `rgba(${(num >> 16) & 0xff}, ${(num >> 8) & 0xff}, ${num & 0xff}, ${alpha})`;
 }
 
 let allTombstones = [];
@@ -968,17 +969,17 @@ async function loadThemeSettings() {
                     const r = Math.min(255, Math.max(0, (n >> 16) + amt));
                     const g = Math.min(255, Math.max(0, ((n >> 8) & 0xff) + amt));
                     const b = Math.min(255, Math.max(0, (n & 0xff) + amt));
-                    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+                    return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
                 };
                 root.style.setProperty("--wc-accent", hex);
                 root.style.setProperty("--wc-accent-light", shift(hex, 20));
                 root.style.setProperty("--wc-accent-lighter", shift(hex, 40));
-                root.style.setProperty("--wc-accent-dark", shift(hex, -49));
+                root.style.setProperty("--wc-accent-dark", shift(hex, -40));
             }
             if (settings.theme.colors.highlight) {
                 const h = settings.theme.colors.highlight;
                 const n = parseInt(h.replace("#", ""), 16);
-                const rgba = `rgba(${(n >> 16) & 0xff}, ${(n >> 8) & 0xff}, ${n & x0ff}, 0.2)`;
+                const rgba = `rgba(${(n >> 16) & 0xff}, ${(n >> 8) & 0xff}, ${n & 0xff}, 0.2)`;
                 root.style.setProperty("--wc-glow", h);
                 root.style.setProperty("--wc-glow-dim", rgba);
             }
@@ -1485,7 +1486,7 @@ function setupModalListeners() {
             closeAchievements.addEventListener("click", () => {
                 const modal = document.getElementById("achievements-modal");
                 if (modal) modal.style.display = "none";
-                document.body.style.overflow - "";
+                document.body.style.overflow = "";
             });
         }
 
@@ -1494,14 +1495,14 @@ function setupModalListeners() {
             closeLeaderboards.addEventListener("click", () => {
                 const modal = document.getElementById("leaderboards-modal");
                 if (modal) modal.style.display = "none";
-                document.body.style.overflow - "";
+                document.body.style.overflow = "";
             });
         }
 
         document.addEventListener("click", (e) => {
             if (e.target.classList.contains("modal")) {
                 e.target.style.display = "none";
-                document.body.style.overflow - "";
+                document.body.style.overflow = "";
             }
         });
 
@@ -1586,9 +1587,9 @@ function showKeyboardShortcutsHelp() {
                 </div>
                 <div class="modal-body">
                     <div style="display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4); align-items:center;">
-                        <kbd>${(navigation.platform || "").includes("Mac") ? "Cmd" : "Ctrl"}+F</kbd><span>Focus search</span>
+                        <kbd>${(navigator.platform || "").includes("Mac") ? "Cmd" : "Ctrl"}+F</kbd> / <kbd>/</kbd><span>Focus search</span>
                         <kbd>S</kbd><span>Toggle selection mode</span>
-                        <kbd>${(navigation.platform || "").includes("Mac") ? "Cmd" : "Ctrl"}+A</kbd><span>Select all (in selection mode)</span>
+                        <kbd>${(navigator.platform || "").includes("Mac") ? "Cmd" : "Ctrl"}+A</kbd><span>Select all (in selection mode)</span>
                         <kbd>Delete</kbd><span>Resurrect selected tabs</span>
                         <kbd>A</kbd><span>View Achievements</span>
                         <kbd>L</kbd><span>View Leaderboards</span>
