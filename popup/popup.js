@@ -95,7 +95,7 @@ function setupEventListeners() {
     document.getElementById("cancel-kill-btn").addEventListener("click", resetKillUI);
 
     document.getElementById("last-words-input").addEventListener("input", () => {
-        const len = document.getElementById("last-wrods-input").value.length;
+        const len = document.getElementById("last-words-input").value.length;
         document.getElementById("last-words-counter").textContent = `${len} / 140`;
     });
 
@@ -148,7 +148,7 @@ async function sendMessageWithRetry(message) {
     } catch (error) {
         const msg = error?.message || "";
         const retryable =
-            msg.includes("Receving end doesnt exist") ||
+            msg.toLowerCase().includes("Receving end doesnt exist") ||
             msg.includes("Could not establish connection") ||
             msg.includes("The message port closed");
 

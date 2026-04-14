@@ -32,7 +32,7 @@ body {
     margin-bottom: 4px;
 }
 @keyframes title-glow {
-    form {
+    from {
         text-shadow: 0 0 8px var(--wc-glow-dim, rgba(127, 223, 0.18));
     }
     to {
@@ -157,7 +157,7 @@ body {
     display: flex;
     align-items: center;
     gap: 7px;
-    font-weight: wrap;
+    flex-wrap: wrap;
 }
 
 .bulk-btn {
@@ -270,7 +270,7 @@ body {
     }
 }
 
-.body.selection-mode .tombstone {
+body.selection-mode .tombstone {
     cursor: pointer;
 }
 
@@ -287,7 +287,7 @@ body {
 .tombstone-header {
     display: flex;
     gap: 8px;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 9px;
 }
 .tombstone-favicon {
@@ -336,7 +336,7 @@ body {
     font-family: "Crimson Text", Georgia, serif;
     font-style: italic;
     font-size: 13px;
-    color: #7a8e7a;
+    color: #7a8e70;
     line-height: 1.5;
 }
 
@@ -502,11 +502,11 @@ body {
     background: rgba(70, 130, 70, 0.3);
     color: #6ab46a;
 }
-.rarity-common {
+.rarity-rare {
     background: rgba(70, 70, 150, 0.3);
     color: #7070b8;
 }
-.rarity-common {
+.rarity-legendary {
     background: rgba(150, 110, 20, 0.3);
     color: #b09030;
 }
@@ -567,7 +567,7 @@ body {
     display: flex;
     align-items: center;
     gap: 7px;
-    font-size: 112px;
+    font-size: 12px;
 }
 .leaderboard-rank {
     color: #4a6a4a;
@@ -627,6 +627,9 @@ body {
         letter-spacing: 2px;
     }
     .stats-panel {
+        gap: 10px;
+    }
+    .controls {
         flex-direction: column;
         align-items: stretch;
     }
@@ -652,7 +655,7 @@ body {
         gap: 14px;
     }
 }
-@media (max-width: 400px) {
+@media (max-width: 480px) {
     .cemetery-grid {
         grid-template-columns: 1fr;
     }

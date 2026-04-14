@@ -258,7 +258,7 @@ const tabInfo = new Map();
 const manuallyKilledTabs = new Set();
 const inFlightKillTabs = new Set();
 const recentlyKilledTabs = new Map();
-const hountedDomains = new Set();
+const hauntedDomains = new Set();
 
 const CONSTANTS = {
     SETTINGS_CACHE_DURATION: 5 * 60 * 1000,
@@ -392,7 +392,7 @@ async function killTab(tab, killMethod = "manual", customEpitaph = null) {
         tabUrl === "about:blank"
     ) {
         inFlightKillTabs.delete(tab.id);
-        console.warn("WebCemetery: Skipping unsupported tab URL for kill operation:", tabUrl || "(empry)");
+        console.warn("WebCemetery: Skipping unsupported tab URL for kill operation:", tabUrl || "(empty)");
         return null;
     }
 
@@ -525,7 +525,7 @@ async function checkHaunting(url) {
             return;
 
         const domain = extractDomain(url);
-        if (hountedDomains.has(domain)) return;
+        if (hauntedDomains.has(domain)) return;
 
         const db = await new Promise((resolve, reject) => {
             const req = indexedDB.open("WebCemeteryDB", 1);
@@ -544,9 +544,9 @@ async function checkHaunting(url) {
 
         if (count < 3) return;
 
-        hountedDomains.add(domain);
+        hauntedDomains.add(domain);
 
-        const iconUrl = browserAPI.runtime.getURL("icon/icon-128.png");
+        const iconUrl = browserAPI.runtime.getURL("icons/icon-128.png");
         const notifId = `haunt-${Date.now()}`;
         await browserAPI.notifications.create(notifId, {
             type: "basic",

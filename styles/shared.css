@@ -9,7 +9,7 @@
     --z-modal: 1000;
     --z-toast: 2000;
 
-    --accent: #2d5a3d;
+    --accent: #2d5a2d;
     --highlight: #7fdf7f;
     --glow: #9fff9f;
     --glow-dim: rgba(127, 223, 127, 0.18);
@@ -90,7 +90,7 @@ select option {
     transition:
         border-color var(--ease),
         background var(--ease),
-        tranform var(--ease);
+        transform var(--ease);
 }
 .btn:hover {
     border-color: #6b8e6b;
