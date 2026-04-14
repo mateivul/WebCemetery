@@ -1,5 +1,17 @@
 const browserAPI = typeof chrome !== "undefined" ? chrome : browser;
 
+function adjustColor(hex, amount) {
+    const num = parseInt(hex.replace("#", ""), 16);
+    const r = Math.min(255, Math.max(0, (num >> 16) + amount));
+    const g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + amount));
+    const b = Math.min(255, Math.max(0, (num & 0xff) + amount));
+    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+function hexToRGBA(hex, alpha) {
+    const num = parseInt(hex.replace("#", ""), 16);
+    return `rgba(${(num >> 16) & 0xff}, ${(num >> 8) & 0xff}, ${num & x0ff}, ${alpha})`;
+}
+
 let allTombstones = [];
 let filtered = [];
 let displayed = [];
@@ -229,17 +241,11 @@ function createTombstoneElement(tombstone) {
     const timeAlive = formatTime(tombstone.timeAlive);
     const killMethod = formatKillMethod(tombstone.killMethod);
     const killedDate = new Date(tombstone.killedAt).toLocaleDateString();
-    const selectionCheckbox = `<label class="tombstone-select" aria-label="Select this tombstone for bulk actions">
-        <input type="checkbox" class="select-checkbox" ${selected.has(tombstone.id) ? "checked" : ""}>
-        <span class="checkmark"></span>
-    </label>`;
-
     const tabGroupBadge = tombstone.tabGroup
         ? `<span class="tab-group-badge" style="--group-color: ${getTabGroupColor(tombstone.tabGroup.color)}" title="Tab Group: ${escapeHtml(tombstone.tabGroup.title)}">${escapeHtml(tombstone.tabGroup.title)}</span>`
         : "";
 
     div.innerHTML = `
-        ${selectionCheckbox}
         <div class="tombstone-header">
             <div class="tombstone-favicon" aria-hidden="true">
             ${tombstone.favicon ? `<img src="${escapeHtml(tombstone.favicon)}" alt="" class="favicon-img">` : ""}
@@ -254,7 +260,7 @@ function createTombstoneElement(tombstone) {
         </div>
 
         <div class="tombstone-body">
-            <backquote class="tombstone-epitaph">
+            <blockquote class="tombstone-epitaph">
             "${escapeHtml(tombstone.epitaph || "Rest in peace")}"
             </blockquote>
         </div>
@@ -275,20 +281,22 @@ function createTombstoneElement(tombstone) {
         </div>
     `;
 
-    const checkbox = div.querySelector(".select-checkbox");
-    const checkboxHandler = (e) => {
+    const resurrectBtn = div.querySelector(".resurrect-btn");
+    const resurrectHandler = (e) => {
         e.stopPropagation();
+        resurrectTab(tombstone);
+    };
+    resurrectBtn.addEventListener("click", resurrectHandler);
+
+    const cardClickHandler = () => {
+        if (!isSelectionMode) return;
         toggleTombstoneSelection(tombstone.id, div);
     };
-    checkbox.addEventListener("change", checkboxHandler);
-
-    const resurrectBtn = div.querySelector(".resurrect-btn");
-    const clickHandler = () => resurrectTab(tombstone);
-    resurrectBtn.addEventListener("click", clickHandler);
+    div.addEventListener("click", cardClickHandler);
 
     cleanups.set(div, () => {
-        resurrectBtn.removeEventListener("click", clickHandler);
-        checkbox.removeEventListener("change", checkboxHandler);
+        resurrectBtn.removeEventListener("click", resurrectHandler);
+        div.removeEventListener("click", cardClickHandler);
     });
 
     if (tombstone.favicon) {
@@ -332,7 +340,7 @@ async function resurrectTab(tombstone, skipUndo = false) {
         }
 
         if (!tombstone.url || tombstone.url === "Unknown URL" || tombstone.url === "about:blank") {
-            throw new Error(`Cannot resurrect "${tombstone.title}" - URL not availabe`);
+            throw new Error(`Cannot resurrect "${tombstone.title}" - URL not available`);
         }
 
         if (isUnsafeUrl(tombstone.url)) throw new Error("Cannot resurrect - URL uses an unsafe protocol");
@@ -351,23 +359,6 @@ async function resurrectTab(tombstone, skipUndo = false) {
         const createdTab = await Promise.race([tabPromise, timeoutPromise]);
 
         await incrementResurrectionCount(1);
-
-        try {
-            const achievementManager = new AchievementManager(window.cemeteryStorage);
-            const stats = await statsCalc.getKilledCounts();
-            const newAchievements = await achievementManager.checkAchievements(stats);
-            if (newAchievements.length > 0) {
-                newAchievements.forEach((achievement) => {
-                    showNotification(`Achievement Unlocked: ${achievement.name}`, "success");
-                });
-                const achievementModal = document.getElementById("achievements-modal");
-                if (achievementModal.style.display === "flex") {
-                    await loadAchievements();
-                }
-            }
-        } catch (error) {
-            console.error("Error checking achievements after resurrection:", error);
-        }
 
         if (!skipUndo) {
             setUndoState(tombstone, createdTab && typeof createdTab.id === "number" ? createdTab.id : null);
@@ -525,23 +516,6 @@ async function bulkResurrect() {
     }
     if (successCount > 0) {
         await incrementResurrectionCount(successCount);
-
-        try {
-            const achievementManager = new AchievementManager(window.cemeteryStorage);
-            const stats = await statsCalc.getKilledCounts();
-            const newAchievements = await achievementManager.checkAchievements(stats);
-            if (newAchievements.length > 0) {
-                newAchievements.forEach((achievement) => {
-                    showNotification(`Achievement Unlocked: ${achievement.name}`, "success");
-                });
-                const achievementModal = document.getElementById("achievements-modal");
-                if (achievementModal.style.display === "flex") {
-                    await loadAchievements();
-                }
-            }
-        } catch (error) {
-            console.error("Error checking achievements after bulk resurrection:", error);
-        }
     }
 
     clearSelection();
@@ -558,7 +532,7 @@ function showConfirmDialog(message, options = {}) {
         const dialogHTML = `
             <div class="modal-overlay" id="confirm-dialog">
                 <div class="modal-content" style="max-width: 400px;">
-                    <div calss="modal-header">
+                    <div class="modal-header">
                         <h3>${escapeHtml(title)}</h3>
                     </div>
                     <div class="modal-body">
@@ -636,7 +610,7 @@ async function undoLastAction() {
     try {
         if (action.type === "bulk-delete" || action.type === "delete") {
             const tombstones = Array.isArray(action.data) ? action.data : [action.data];
-            for (const tombstone of tombstones) await storage.saveTombstone(tombstone);
+            for (const tombstone of tombstones) await storage.addTombstone(tombstone);
 
             await loadTombstones();
             await loadStats();
@@ -705,7 +679,7 @@ async function loadAchievements() {
         }
         renderAchievements(mergedAchievements);
     } catch (error) {
-        console.error("Error loading achievements".error);
+        console.error("Error loading achievements:", error);
     }
 }
 
@@ -715,7 +689,7 @@ function renderAchievements(achievements) {
     const unlockedCountEl = document.getElementById("unlocked-count");
 
     if (!container) {
-        console.warn("achievements-grid container not fownd");
+        console.warn("achievements-grid container not found");
         return;
     }
 
@@ -794,7 +768,7 @@ function setupEventListeners() {
     const searchInput = document.getElementById("search-input");
     searchInput.addEventListener("input", debounce(onSearch, 150));
 
-    setupSeacrchClear(searchInput);
+    setupSearchClear(searchInput);
 
     const filterMethod = document.getElementById("filter-method");
     filterMethod.addEventListener("change", applyFilters);
@@ -804,7 +778,6 @@ function setupEventListeners() {
 
     const settingsBtn = document.getElementById("settings-btn");
     settingsBtn.addEventListener("click", () => {
-        // browserAPI.runtime.openOptionsPage();
         browserAPI.tabs.create({ url: browserAPI.runtime.getURL("options/options.html") });
     });
 
@@ -853,7 +826,7 @@ function updateBulkActionsVisibility() {
     }
 }
 
-function setupSeacrchClear(searchInput) {
+function setupSearchClear(searchInput) {
     const wrapper = searchInput.parentElement;
 
     const clearBtn = document.createElement("button");
@@ -937,11 +910,9 @@ function applyFilters() {
     const killMethodFilter = document.getElementById("filter-method").value;
     currentPage = 1;
 
-    // let results = [...allTombstones];
-
     if (currentSearchQuery) {
         const terms = currentSearchQuery.split(" ").filter((t) => t.length > 0);
-        filtered = results.filter((t) => {
+        filtered = allTombstones.filter((t) => {
             const text = [t.title || "", t.domain || "", t.epitaph || "", t.url || "", t.killMethod || ""]
                 .join(" ")
                 .toLowerCase();
@@ -955,8 +926,6 @@ function applyFilters() {
         filtered = filtered.filter((t) => t.killMethod === killMethodFilter);
     }
 
-    // filtered = results;
-    // updateSearchResults(filtered.length, allTombstones.length - filtered.length);
     applySorting();
 }
 
@@ -993,14 +962,25 @@ async function loadThemeSettings() {
             const root = document.documentElement;
 
             if (settings.theme.colors.accent) {
-                root.style.setProperty("--wc-accent", settings.theme.colors.accent);
-                root.style.setProperty("--wc-accent-light", adjustColor(settings.theme.colors.accent, 20));
-                root.style.setProperty("--wc-accent-lighter", adjustColor(settings.theme.colors.accent, 40));
-                root.style.setProperty("--wc-accent-dark", adjustColor(settings.theme.colors.accent, -40));
+                const hex = settings.theme.colors.accent;
+                const shift = (h, amt) => {
+                    const n = parseInt(h.replace("#", ""), 16);
+                    const r = Math.min(255, Math.max(0, (n >> 16) + amt));
+                    const g = Math.min(255, Math.max(0, ((n >> 8) & 0xff) + amt));
+                    const b = Math.min(255, Math.max(0, (n & 0xff) + amt));
+                    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+                };
+                root.style.setProperty("--wc-accent", hex);
+                root.style.setProperty("--wc-accent-light", shift(hex, 20));
+                root.style.setProperty("--wc-accent-lighter", shift(hex, 40));
+                root.style.setProperty("--wc-accent-dark", shift(hex, -49));
             }
             if (settings.theme.colors.highlight) {
-                root.style.setProperty("--wc-glow", settings.theme.colors.highlight);
-                root.style.setProperty("--wc-glow-dim", `${hexToRGBA(settings.theme.colors.highlight, 0.2)}`);
+                const h = settings.theme.colors.highlight;
+                const n = parseInt(h.replace("#", ""), 16);
+                const rgba = `rgba(${(n >> 16) & 0xff}, ${(n >> 8) & 0xff}, ${n & x0ff}, 0.2)`;
+                root.style.setProperty("--wc-glow", h);
+                root.style.setProperty("--wc-glow-dim", rgba);
             }
             if (settings.theme.colors.glow) {
                 root.style.setProperty("--wc-text", settings.theme.colors.glow);
@@ -1016,16 +996,16 @@ function initMobileEnhancements() {
     if ("ontouchstart" in window) {
         document.body.classList.add("touch-device");
 
-        const interactiveElemets = ".tombstone, .achievement-card, .stat-box, .btn, .resurrect-btn";
+        const interactiveElements = ".tombstone, .achievement-card, .stat-box, .btn, .resurrect-btn";
         let touchTimeout = null;
 
         const handleTouchStart = (e) => {
-            const target = e.target.closest(interactiveElemets);
+            const target = e.target.closest(interactiveElements);
             if (target) target.classList.add("touching");
         };
 
         const handleTouchEnd = (e) => {
-            const target = e.target.closest(interactiveElemets);
+            const target = e.target.closest(interactiveElements);
             if (target) {
                 if (touchTimeout) clearTimeout(touchTimeout);
 
@@ -1149,7 +1129,7 @@ function formatKillMethod(method) {
 }
 
 function getTabGroupColor(colorName) {
-    const colorts = {
+    const colors = {
         grey: "#5f6368",
         blue: "#1a73e8",
         red: "#d93025",
@@ -1181,46 +1161,21 @@ function debounce(func, wait) {
     };
 }
 
-function showNotificationWithUndo(message, type = "success") {
-    const notification = document.createElement("div");
-    notification.className = "toast toast-" + type;
-    notification.innerHTML = `
-        <span>${escapeHtml(message)}</span>
-        <button class="btn btn-sm btn-secondary" id="undo-btn" style="margin-left: var(--space-4);">Undo</button>
-    `;
-
-    document.body.appendChild(notification);
-    const undoBtn = notification.querySelector("#undo-btn");
-    let undoClicked = false;
-
-    undoBtn.addEventListener("click", async () => {
-        undoClicked = true;
-        notification.remove();
-        await undoLastAction();
-    });
-
-    setTimeout(() => {
-        if (!undoClicked) notification.remove();
-    }, 5000);
-}
-
 function showNotification(message, type = "info", showUndo = false) {
-    console.log(`${type.toUpperCase()} Notification:`, message);
-
     const notification = document.createElement("div");
     notification.className = showUndo ? "notification undo-notification" : "notification";
 
-    const colors = {
+    const notifColors = {
         success: { bg: "rgba(45,90,45,0.95)", border: "#6b8e6b", color: "#b0c4b0" },
         error: { bg: "rgba(120,45,45,0.95)", border: "#8e6b6b", color: "#c4b0b0" },
         warning: { bg: "rgba(120,90,45,0.95)", border: "#8e8b6b", color: "#c4c0b0" },
         info: { bg: "rgba(45,90,45,0.95)", border: "#6b8e6b", color: "#b0c4b0" },
     };
 
-    const color = colors[type] || colors.info;
+    const color = notifColors[type] || notifColors.info;
 
-    notification.style.sccText = `
-        potistion: fixed;
+    notification.style.cssText = `
+        position: fixed;
         top: 20px;
         right: 20px;
         background: ${color.bg};
@@ -1530,6 +1485,7 @@ function setupModalListeners() {
             closeAchievements.addEventListener("click", () => {
                 const modal = document.getElementById("achievements-modal");
                 if (modal) modal.style.display = "none";
+                document.body.style.overflow - "";
             });
         }
 
@@ -1538,11 +1494,15 @@ function setupModalListeners() {
             closeLeaderboards.addEventListener("click", () => {
                 const modal = document.getElementById("leaderboards-modal");
                 if (modal) modal.style.display = "none";
+                document.body.style.overflow - "";
             });
         }
 
         document.addEventListener("click", (e) => {
-            if (e.target.classList.contains("modal")) e.target.style.display = "none";
+            if (e.target.classList.contains("modal")) {
+                e.target.style.display = "none";
+                document.body.style.overflow - "";
+            }
         });
 
         document.addEventListener("keydown", (event) => {
@@ -1571,7 +1531,7 @@ function setupModalListeners() {
             const key = event.key.toLowerCase();
             const ctrl = event.ctrlKey || event.metaKey;
 
-            if (ctrl && key === "f") {
+            if ((ctrl && key === "f") || (!ctrl && !event.shiftKey && key === "/")) {
                 const searchInput = document.getElementById("search-input");
 
                 if (searchInput) {
@@ -1626,9 +1586,9 @@ function showKeyboardShortcutsHelp() {
                 </div>
                 <div class="modal-body">
                     <div style="display: grid; grid-template-columns: auto 1fr; gap: var(--space-2) var(--space-4); align-items:center;">
-                        <kbd>${navigation.platform.includes("Mac") ? "Cmd" : "Ctrl"}+F</kbd><span>Focus search</span>
+                        <kbd>${(navigation.platform || "").includes("Mac") ? "Cmd" : "Ctrl"}+F</kbd><span>Focus search</span>
                         <kbd>S</kbd><span>Toggle selection mode</span>
-                        <kbd>${navigation.platform.includes("Mac") ? "Cmd" : "Ctrl"}+A</kbd><span>Select all (in selection mode)</span>
+                        <kbd>${(navigation.platform || "").includes("Mac") ? "Cmd" : "Ctrl"}+A</kbd><span>Select all (in selection mode)</span>
                         <kbd>Delete</kbd><span>Resurrect selected tabs</span>
                         <kbd>A</kbd><span>View Achievements</span>
                         <kbd>L</kbd><span>View Leaderboards</span>
@@ -1788,7 +1748,6 @@ async function importCemetery(event) {
     }
 }
 
-// finally end, now cleanup ...
 window.addEventListener("beforeunload", () => {
     if (window.webCemeteryCleanup) {
         window.webCemeteryCleanup.forEach((cleanup) => {
