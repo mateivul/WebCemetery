@@ -7,6 +7,8 @@ importScripts(
 
 const browserAPI = typeof chrome !== "undefined" ? chrome : browser;
 
+const DEBUG = false;
+
 let storage;
 let achievementManager;
 let isInitialized = false;
@@ -24,7 +26,7 @@ const initializationState = {
 };
 
 async function performInitialization() {
-    console.log("WebCemetery: Starting initialization...");
+    if (DEBUG) console.log("WebCemetery: Starting initialization...");
 
     try {
         await initStorage();
@@ -50,7 +52,7 @@ async function performInitialization() {
             });
             initializationState.contextMenu = true;
         } catch (error) {
-            console.warn("Failed to creade context menu:", error);
+            console.warn("Failed to create context menu:", error);
         }
 
         try {
@@ -62,11 +64,8 @@ async function performInitialization() {
             console.warn("Failed to create alarms:", error);
         }
 
-        const settings = await getSettings();
-        console.log("WebCemetery: loaded settings:", settings);
-
         isInitialized = true;
-        console.log("WebCemetery: Initialization complete");
+        if (DEBUG) console.log("WebCemetery: Initialization complete");
         return true;
     } catch (error) {
         console.error("WebCemetery: Initialization failed:", error);
@@ -84,14 +83,14 @@ async function safeInitialize() {
 }
 
 browserAPI.runtime.onInstalled.addListener(async (details) => {
-    console.log("WebCemetery installed:", details.reason);
+    if (DEBUG) console.log("WebCemetery installed:", details.reason);
 
     for (let attempt = 1; attempt <= 3; attempt++) {
         try {
             await safeInitialize();
             break;
         } catch (error) {
-            console.error(`WebCemetery: Initialization atempt ${attempt} failed:`, error);
+            console.error(`WebCemetery: Initialization attempt ${attempt} failed:`, error);
             if (attempt === 3) {
                 console.error("WebCemetery: All initialization attempts failed");
             } else {
@@ -106,7 +105,7 @@ async function loadExistingTabs() {
         const existingTabs = await browserAPI.tabs.query({});
         const currentTime = Date.now();
 
-        console.log(`WebCemetery: Loading ${existingTabs.length} existing tabs into tracking`);
+        if (DEBUG) console.log(`WebCemetery: Loading ${existingTabs.length} existing tabs into tracking`);
 
         for (const tab of existingTabs) {
             const estimatedCreationTime = currentTime - 30 * 1000;
@@ -119,14 +118,14 @@ async function loadExistingTabs() {
             });
         }
 
-        console.log("WebCemetery: Existing tabs loaded successfully");
+        if (DEBUG) console.log("WebCemetery: Existing tabs loaded successfully");
     } catch (error) {
         console.warn("WebCemetery: Failed to load existing tabs:", error);
     }
 }
 
 browserAPI.runtime.onStartup.addListener(async () => {
-    console.log("WebCemetery: Service worker starting up");
+    if (DEBUG) console.log("WebCemetery: Service worker starting up");
     await safeInitialize();
 });
 
@@ -135,7 +134,7 @@ browserAPI.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 browserAPI.commands.onCommand.addListener(async (command) => {
-    console.log("WebCemetery: Command received:", command);
+    if (DEBUG) console.log("WebCemetery: Command received:", command);
 
     try {
         await safeInitialize();
@@ -144,7 +143,7 @@ browserAPI.commands.onCommand.addListener(async (command) => {
             const [tab] = await browserAPI.tabs.query({ active: true, currentWindow: true });
             if (tab && tab.id) {
                 if (tab.url?.startsWith("chrome-extension://") || tab.url?.startsWith("chrome://")) {
-                    console.log("WebCemetery: cannot kill extension/browser pages");
+                    if (DEBUG) console.log("WebCemetery: cannot kill extension/browser pages");
                     return;
                 }
                 await killTab(tab, "keyboard-shortcut");
@@ -259,6 +258,7 @@ const tabInfo = new Map();
 const manuallyKilledTabs = new Set();
 const inFlightKillTabs = new Set();
 const recentlyKilledTabs = new Map();
+const hauntedDomains = new Set();
 
 const CONSTANTS = {
     SETTINGS_CACHE_DURATION: 5 * 60 * 1000,
@@ -295,6 +295,16 @@ browserAPI.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             favIconUrl: changeInfo.favIconUrl || tab.favIconUrl || existing.favIconUrl || "",
         });
     }
+    if (changeInfo.url) checkHaunting(changeInfo.url);
+});
+
+browserAPI.tabs.onActivated.addListener(({ tabId }) => {
+    browserAPI.tabs
+        .get(tabId)
+        .then((tab) => {
+            if (tab?.url) checkHaunting(tab.url);
+        })
+        .catch(() => {});
 });
 
 browserAPI.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
@@ -333,7 +343,7 @@ browserAPI.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
             };
 
             await saveTombstone(tombstone);
-            console.log("Manually cloed tab tracked:", tombstone);
+            if (DEBUG) console.log("Manually cloed tab tracked:", tombstone);
         } catch (error) {
             console.error("Error tracking manually closed tab:", error);
         }
@@ -358,7 +368,7 @@ async function getTabGroupInfo(tab) {
 }
 
 async function killTab(tab, killMethod = "manual", customEpitaph = null) {
-    if (!tab || typeof tab.id !== "number") throw new Error("Invalide tab: missing tab id");
+    if (!tab || typeof tab.id !== "number") throw new Error("Invalid tab: missing or invalid tab id");
 
     const now = Date.now();
     const lastKilledAt = recentlyKilledTabs.get(tab.id);
@@ -429,7 +439,6 @@ async function killTab(tab, killMethod = "manual", customEpitaph = null) {
                     await showAchievementsNotification(achievement);
                 } catch (notificationError) {
                     console.warn("WebCemetery: achievement notification failed:", notificationError);
-                    console.log("tab killed:", tab.id);
                 }
             }
         }
@@ -444,7 +453,7 @@ async function killTab(tab, killMethod = "manual", customEpitaph = null) {
             }
         }
 
-        console.log("Tab killed:", tombstone);
+        if (DEBUG) console.log("Tab killed:", tombstone);
         return tombstone;
     } catch (error) {
         console.error("Error killing tab:", { error, tabId: tab?.id, tabUrl: tab?.url, killMethod });
@@ -498,6 +507,58 @@ async function showAchievementsNotification(achievement) {
             browserAPI.notifications.clear(`legendary-${achievement.id}`);
         }
     }, clearTime);
+}
+
+async function countTombstonesByDomain(domain) {
+    return new Promise((resolve, reject) => {
+        const tx = storage.transaction("tombstones", "readonly");
+        const index = tx.objectStore("tombstones").index("domain");
+        const request = index.count(domain);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function checkHaunting(url) {
+    try {
+        if (!url || url.startsWith("chrome://") || url.startsWith("chrome-extension://") || url === "about:blank")
+            return;
+
+        const domain = extractDomain(url);
+        if (hauntedDomains.has(domain)) return;
+
+        const db = await new Promise((resolve, reject) => {
+            const req = indexedDB.open("WebCemeteryDB", 1);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+
+        const count = await new Promise((resolve, reject) => {
+            const tx = db.transaction("tombstones", "readonly");
+            const req = tx.objectStore("tombstones").index("domain").count(domain);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+
+        db.close();
+
+        if (count < 3) return;
+
+        hountedDomains.add(domain);
+
+        const iconUrl = browserAPI.runtime.getURL("icon/icon-128.png");
+        const notifId = `haunt-${Date.now()}`;
+        await browserAPI.notifications.create(notifId, {
+            type: "basic",
+            iconUrl,
+            title: "A haunting...",
+            message: `You've returned to ${domain}. ${count} of its tabs already rest in your cemetery.`,
+        });
+
+        setTimeout(() => browserAPI.notifications.clear(notifId), 6000);
+    } catch (error) {
+        console.warn("WebCemetery: haunting check failed:", error);
+    }
 }
 
 async function getAllStatsFromDB() {
@@ -617,7 +678,7 @@ async function detectAndKillGhostTabs() {
                             }
                         }
                     } catch (e) {
-                        console.log("Process API not available:", e);
+                        if (DEBUG) console.log("Process API not available:", e);
                     }
                 }
             }
@@ -642,7 +703,7 @@ async function autoArchiveOldTombstones() {
         const daysMs = settings.autoArchive.daysToKeep * 24 * 60 * 60 * 1000;
         const beforeDate = Date.now() - daysMs;
         const count = await deleteOldTombstones(beforeDate);
-        console.log(`Auto-archived ${count} old tombstones`);
+        if (DEBUG) console.log(`Auto-archived ${count} old tombstones`);
     } catch (error) {
         console.error("Error in auto-archieve:", error);
     }
@@ -811,12 +872,7 @@ async function calculateStats() {
     return new Promise((resolve, reject) => {
         const tx = storage.transaction(["tombstones"], "readonly");
         const tombstoneStore = tx.objectStore("tombstones");
-        // const statsStore = tx.objectStore("stats");
         const allRequest = tombstoneStore.getAll();
-
-        // const now = new Date();
-        // const today = now.toISOString().split("T")[0];
-        // const todayRequest = statsStore.get(today);
 
         allRequest.onsuccess = () => {
             const tombstones = allRequest.result || [];
@@ -824,7 +880,6 @@ async function calculateStats() {
             const todayStr = now.toISOString().split("T")[0];
             const weekAgoMs = now.getTime() - 7 * 24 * 60 * 60 * 1000;
             const monthAgoMs = now.getTime() - 30 * 24 * 60 * 60 * 1000;
-            // const allStatsRequest = statsStore.getAll();
 
             const todayCount = tombstones.filter(
                 (t) => new Date(t.killedAt).toISOString().split("T")[0] === todayStr,
@@ -883,19 +938,4 @@ function formatTime(seconds) {
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
     return `${Math.floor(seconds / 86400)}d`;
-}
-
-initStorage().catch(console.error);
-
-function getTabMemoryOld(tabId) {
-    return 0;
-}
-
-function debugTabState() {
-    console.log("aloo why not work", tabCreationTimes.size);
-    console.log("killed t:", manuallyKilledTabs.size);
-}
-
-function makeId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
