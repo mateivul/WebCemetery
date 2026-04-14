@@ -66,7 +66,7 @@ function setupEventListeners() {
     document.getElementById("confirm-kill-btn").addEventListener("click", async () => {
         if (killRequestInFlight) return;
 
-        const lastWords = document.getElementById("last-words-input").ariaValueMax.trim();
+        const lastWords = document.getElementById("last-words-input").value.trim();
         const confirmBtn = document.getElementById("confirm-kill-btn");
 
         killRequestInFlight = true;

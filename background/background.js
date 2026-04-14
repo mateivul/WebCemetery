@@ -258,7 +258,7 @@ const tabInfo = new Map();
 const manuallyKilledTabs = new Set();
 const inFlightKillTabs = new Set();
 const recentlyKilledTabs = new Map();
-const hauntedDomains = new Set();
+const hountedDomains = new Set();
 
 const CONSTANTS = {
     SETTINGS_CACHE_DURATION: 5 * 60 * 1000,
@@ -525,7 +525,7 @@ async function checkHaunting(url) {
             return;
 
         const domain = extractDomain(url);
-        if (hauntedDomains.has(domain)) return;
+        if (hountedDomains.has(domain)) return;
 
         const db = await new Promise((resolve, reject) => {
             const req = indexedDB.open("WebCemeteryDB", 1);
