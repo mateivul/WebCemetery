@@ -55,35 +55,48 @@ async function loadStats() {
 }
 
 function setupEventListeners() {
-    document.getElementById("kill-tab-btn").addEventListener("click", async () => {
-        const btn = document.getElementById("kill-tab-btn");
-        if (killRequestInFlight) {
-            return;
-        }
+    // reveal last words
+    document.getElementById("kill-tab-btn").addEventListener("click", () => {
+        const section = document.getElementById("last-words-section");
+        section.removeAttribute("hidden");
+        document.getElementById("kill-tab-btn").disabled = true;
+        document.getElementById("last-words-input").focus();
+    });
+
+    document.getElementById("confirm-kill-btn").addEventListener("click", async () => {
+        if (killRequestInFlight) return;
+
+        const lastWords = document.getElementById("last-words-input").ariaValueMax.trim();
+        const confirmBtn = document.getElementById("confirm-kill-btn");
 
         killRequestInFlight = true;
-        try {
-            btn.disabled = true;
-            btn.textContent = "Killing...";
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = "Killing...";
 
-            const response = await sendMessageWithRetry({ action: "killCurrentTab" });
+        try {
+            const response = await sendMessageWithRetry({ action: "killCurrentTab", customEpitaph: lastWords || null });
 
             if (response.success) {
                 window.close();
             } else {
                 console.error("Failed to kill tab:", response.error);
-                btn.disabled = false;
-                btn.textContent = "Kill Current Tab";
                 showError("Failed to kill tab: " + response.error);
+                resetKillUI();
             }
         } catch (error) {
             console.error("Error killing tab:", error);
-            btn.disabled = false;
-            btn.textContent = "Kill Current Tab";
             showError("Error: " + error.message);
+            resetKillUI();
         } finally {
             killRequestInFlight = false;
         }
+    });
+
+    document.getElementById("cancel-kill-btn").addEventListener("click", resetKillUI);
+
+    document.getElementById("last-words-input").addEventListener("input", () => {
+        const len = document.getElementById("last-wrods-input").value.length;
+        document.getElementById("last-words-counter").textContent = `${len} / 140`;
     });
 
     document.getElementById("view-cemetery-btn").addEventListener("click", () => {
@@ -94,10 +107,20 @@ function setupEventListeners() {
 
     document.getElementById("settings-link").addEventListener("click", (e) => {
         e.preventDefault();
-        // browserAPI.runtime.openOptionsPage();
         browserAPI.tabs.create({ url: browserAPI.runtime.getURL("options/options.html") });
         window.close();
     });
+}
+
+function resetKillUI() {
+    const section = document.getElementById("last-words-section");
+    section.setAttribute("hidden", "");
+    document.getElementById("kill-tab-btn").disabled = false;
+    document.getElementById("last-words-input").value = "";
+    document.getElementById("last-words-counter").textContent = "0 / 140";
+    const confirmBtn = document.getElementById("confirm-kill-btn");
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = "Confirm Kill";
 }
 
 function sendMessage(message) {
@@ -136,11 +159,6 @@ async function sendMessageWithRetry(message) {
         await new Promise((resolve) => setTimeout(resolve, 250));
         return sendMessage(message);
     }
-}
-
-function resetKillButton(btn) {
-    btn.disabled = false;
-    btn.textContent = "Kill Current Tab";
 }
 
 function showError(message) {

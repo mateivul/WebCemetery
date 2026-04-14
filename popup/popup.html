@@ -38,6 +38,23 @@
                 <button class="btn btn-secondary" id="view-cemetery-btn">View Full Cemetery</button>
             </nav>
 
+            <div class="last-words-section" id="kill-tab-section">
+                <label for="last-words-input" class="last-words-label">Last words for this tab:</label>
+                <textarea
+                    id="last-words-input"
+                    class="last-words-input"
+                    placeholder="Optional epitaph... (leave blank for auto-generated one)"
+                    maxlength="140"
+                    rows="2"
+                    autocomplete="off"
+                ></textarea>
+                <div class="last-words-footer">
+                    <span class="last-words-counter" id="last-words-counter">0 / 140</span>
+                    <button class="btn btn-ghost btn-sm" id="cancel-kill-btn">Cancel</button>
+                    <button class="btn btn-danger btn-sm" id="confirm-kill-btn">Confirm Kill</button>
+                </div>
+            </div>
+
             <footer class="popup-footer">
                 <a href="#" id="settings-link" class="settings-link">⚙️ Settings</a>
             </footer>
