@@ -60,6 +60,7 @@
     padding-bottom: 14px;
     border-bottom: 1px solid rgba(30, 60, 30, 0.3);
 }
+
 .setting-item:last-child {
     border-bottom: none;
     margin-bottom: 0;
@@ -151,7 +152,7 @@
     background: rgba(15, 40, 15, 0.4);
     border: 1px solid #3a5a3a;
     border-radius: 4px;
-    color: #6a5a6a;
+    color: #6a8a6a;
     cursor: pointer;
     transition: 120ms;
 }
@@ -190,6 +191,7 @@
         padding: 20px 14px;
     }
 }
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

@@ -343,7 +343,7 @@ browserAPI.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
             };
 
             await saveTombstone(tombstone);
-            if (DEBUG) console.log("Manually cloed tab tracked:", tombstone);
+            if (DEBUG) console.log("Manually closed tab tracked:", tombstone);
         } catch (error) {
             console.error("Error tracking manually closed tab:", error);
         }
@@ -378,7 +378,7 @@ async function killTab(tab, killMethod = "manual", customEpitaph = null) {
     }
 
     if (inFlightKillTabs.has(tab.id)) {
-        console.warn(`WebCemetery: kill already in porgerss for tab ${tab.id}`);
+        console.warn(`WebCemetery: kill already in progress for tab ${tab.id}`);
         return null;
     }
 
@@ -392,7 +392,7 @@ async function killTab(tab, killMethod = "manual", customEpitaph = null) {
         tabUrl === "about:blank"
     ) {
         inFlightKillTabs.delete(tab.id);
-        console.warn("WebCemetery: Skipping unsupported tab URL for kill operation:", tabUrl || "(empry)");
+        console.warn("WebCemetery: Skipping unsupported tab URL for kill operation:", tabUrl || "(empty)");
         return null;
     }
 
@@ -544,14 +544,14 @@ async function checkHaunting(url) {
 
         if (count < 3) return;
 
-        hountedDomains.add(domain);
+        hauntedDomains.add(domain);
 
-        const iconUrl = browserAPI.runtime.getURL("icon/icon-128.png");
+        const iconUrl = browserAPI.runtime.getURL("icons/icon-128.png");
         const notifId = `haunt-${Date.now()}`;
         await browserAPI.notifications.create(notifId, {
             type: "basic",
             iconUrl,
-            title: "A haunting...",
+            title: "👻 A haunting...",
             message: `You've returned to ${domain}. ${count} of its tabs already rest in your cemetery.`,
         });
 
@@ -705,7 +705,7 @@ async function autoArchiveOldTombstones() {
         const count = await deleteOldTombstones(beforeDate);
         if (DEBUG) console.log(`Auto-archived ${count} old tombstones`);
     } catch (error) {
-        console.error("Error in auto-archieve:", error);
+        console.error("Error in auto-archive:", error);
     }
 }
 
@@ -828,7 +828,7 @@ async function deleteOldTombstones(beforeDate) {
     if (!storage) await safeInitialize();
 
     if (!storage) {
-        console.error("Storage not available for deleteOldTombstomes");
+        console.error("Storage not available for deleteOldTombstones");
         return 0;
     }
 
@@ -862,7 +862,7 @@ async function deleteOldTombstones(beforeDate) {
 
             getAllRequest.onerror = () => reject(getAllRequest.error);
         } catch (error) {
-            console.error("Error in delelteOldTombstones:", error);
+            console.error("Error in deleteOldTombstones:", error);
             reject(error);
         }
     });

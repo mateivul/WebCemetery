@@ -65,6 +65,9 @@ body {
     margin-bottom: 14px;
 }
 
+.last-words-section[hidden] {
+    display: none;
+}
 .last-words-section {
     margin: 0 0 14px;
     padding: 11px 12px;
@@ -101,7 +104,7 @@ body {
     font-style: italic;
     font-size: 13px;
     color: #b0c8b0;
-    background: rgba(14, 40, 15, 0.4);
+    background: rgba(15, 40, 15, 0.4);
     border: 1px solid #2d5a2d;
     border-radius: 4px;
     padding: 7px 9px;
@@ -122,7 +125,7 @@ body {
 
 .last-words-counter {
     font-size: 10px;
-    color: #5a8a5a;
+    color: #5a7a5a;
     flex: 1;
 }
 
@@ -145,6 +148,7 @@ body {
     opacity: 0.5;
     animation: pulse 1.4s ease-in-out infinite;
 }
+
 @keyframes pulse {
     0%,
     100% {
@@ -161,7 +165,7 @@ body {
     left: 50%;
     transform: translateX(-50%);
     background: #3a1a1a;
-    color: #e0b0e0;
+    color: #e0b0b0;
     padding: 10px 16px;
     border-radius: 7px;
     border: 1px solid #7a3a3a;

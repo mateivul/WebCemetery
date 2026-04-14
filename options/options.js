@@ -163,7 +163,7 @@ async function clearCemetery() {
 
     if (!confirmed) return;
 
-    const doubleConfirm = confirm("This is you LAST chace!\n\n" + "Click OK to PERMANENTLY delete everything.");
+    const doubleConfirm = confirm("This is your LAST chance!\n\n" + "Click OK to PERMANENTLY delete everything.");
     if (!doubleConfirm) return;
 
     try {

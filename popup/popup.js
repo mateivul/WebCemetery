@@ -55,7 +55,6 @@ async function loadStats() {
 }
 
 function setupEventListeners() {
-    // reveal last words
     document.getElementById("kill-tab-btn").addEventListener("click", () => {
         const section = document.getElementById("last-words-section");
         section.removeAttribute("hidden");
@@ -66,7 +65,7 @@ function setupEventListeners() {
     document.getElementById("confirm-kill-btn").addEventListener("click", async () => {
         if (killRequestInFlight) return;
 
-        const lastWords = document.getElementById("last-words-input").ariaValueMax.trim();
+        const lastWords = document.getElementById("last-words-input").value.trim();
         const confirmBtn = document.getElementById("confirm-kill-btn");
 
         killRequestInFlight = true;
@@ -74,7 +73,10 @@ function setupEventListeners() {
         confirmBtn.textContent = "Killing...";
 
         try {
-            const response = await sendMessageWithRetry({ action: "killCurrentTab", customEpitaph: lastWords || null });
+            const response = await sendMessageWithRetry({
+                action: "killCurrentTab",
+                customEpitaph: lastWords || null,
+            });
 
             if (response.success) {
                 window.close();
@@ -95,7 +97,7 @@ function setupEventListeners() {
     document.getElementById("cancel-kill-btn").addEventListener("click", resetKillUI);
 
     document.getElementById("last-words-input").addEventListener("input", () => {
-        const len = document.getElementById("last-wrods-input").value.length;
+        const len = document.getElementById("last-words-input").value.length;
         document.getElementById("last-words-counter").textContent = `${len} / 140`;
     });
 
@@ -132,7 +134,7 @@ function sendMessage(message) {
             }
 
             if (!response) {
-                reject(new Error("no response form background script"));
+                reject(new Error("no response from background script"));
                 return;
             }
 
@@ -141,14 +143,13 @@ function sendMessage(message) {
     });
 }
 
-//1 retry
 async function sendMessageWithRetry(message) {
     try {
         return await sendMessage(message);
     } catch (error) {
         const msg = error?.message || "";
         const retryable =
-            msg.includes("Receving end doesnt exist") ||
+            msg.toLowerCase().includes("receiving end does not exist") ||
             msg.includes("Could not establish connection") ||
             msg.includes("The message port closed");
 
