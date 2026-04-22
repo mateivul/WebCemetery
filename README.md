@@ -28,3 +28,8 @@ Chrome / something running on Chromium
 3. Enable **Developer mode** (top right)
 4. Click **Load unpacked** and select the crx file
 5. and now edit anything you want
+
+### AI declaration:
+
+- some of the epitaphs (tombstone text) were AI-generated (in lib/epitaph-generator.js).
+- in v1.0.0 the style was created with AI, but I remade all of it myself in v2.0.0 and added new features.
