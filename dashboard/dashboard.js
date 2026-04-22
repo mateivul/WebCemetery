@@ -283,7 +283,10 @@ function createTombstoneElement(tombstone) {
     `;
 
     const resurrectBtn = div.querySelector(".resurrect-btn");
-    const resurrectHandler = (e) => { e.stopPropagation(); resurrectTab(tombstone); };
+    const resurrectHandler = (e) => {
+        e.stopPropagation();
+        resurrectTab(tombstone);
+    };
     resurrectBtn.addEventListener("click", resurrectHandler);
 
     const cardClickHandler = () => {
@@ -1636,7 +1639,7 @@ async function exportCemetery() {
         const achievements = await storage.getSetting("achievements");
 
         const exportData = {
-            version: "1.0.0",
+            version: "2.0.0",
             exportDate: new Date().toISOString(),
             tombstones: tombstones,
             settings: settings,
@@ -1679,7 +1682,7 @@ async function importCemetery(event) {
         if (!importData.tombstones || !Array.isArray(importData.tombstones))
             throw new Error("Invalid import file: missing tombstones array");
 
-        if (importData.version && importData.version !== "1.0.0")
+        if (importData.version && importData.version !== "2.0.0")
             console.warn("Import file version mismatch, attempting import anyway");
 
         const existingCount = allTombstones.length;
